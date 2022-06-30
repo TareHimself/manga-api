@@ -9,6 +9,10 @@ const availablePages = [];
 const MAX_PER_BROWSER = 6;
 PAGE_LOAD_OPTIONS = {}
 
+const browserArgs = [
+	'--no-sandbox'
+];
+
 let showDebug = false;
 
 async function Initialize(browserCount = 1, debug = false) {
@@ -24,7 +28,7 @@ async function Initialize(browserCount = 1, debug = false) {
 	puppeteer.use(AdblockerPlugin({ blockTrackers: true }))
 
 	for (i = 0; i < browserCount; i++) {
-		const newBrowser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+		const newBrowser = await puppeteer.launch({ headless: true, args: browserArgs, userDataDir: '../cachedData' });
 
 		browsers.push(newBrowser);
 
@@ -48,11 +52,17 @@ function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function waitForPageNaviagation(page, url) {
+async function waitForPageNaviagation(page, url, selector) {
 	try {
 		//await sleep(10000);
-		await page.goto(url, PAGE_LOAD_OPTIONS)
-		await page.waitForSelector('.main_section')
+		if (selector && selector.trim) {
+			page.goto(url, PAGE_LOAD_OPTIONS)
+			await page.waitForSelector(selector)
+		}
+		else {
+			await page.goto(url, PAGE_LOAD_OPTIONS)
+		}
+
 	} catch (error) {
 
 	}
@@ -74,6 +84,7 @@ class PageLoader extends EventEmitter {
 		super();
 		this.url = '';
 		this.bWascancelled = false;
+		this.bHasLoaded = false;
 	}
 
 	/**
@@ -81,7 +92,7 @@ class PageLoader extends EventEmitter {
 	* @param {string} url
 	*
 	*/
-	async load(url) {
+	async load(url, selector = null) {
 		this.url = url;
 		this.once('cancel', () => {
 			this.bWascancelled = true;
@@ -105,10 +116,11 @@ class PageLoader extends EventEmitter {
 
 		try {
 
+
 			let stopCallback = null;
 			const stopPromise = new Promise(x => stopCallback = x);
 
-			Promise.race([waitForPageNaviagation(page, this.url), stopPromise]).then(() => {
+			Promise.race([waitForPageNaviagation(page, this.url, selector), stopPromise]).then(() => {
 				if (this.bWascancelled) {
 					if (page) closePage(page);
 
@@ -116,7 +128,9 @@ class PageLoader extends EventEmitter {
 					this.emit('onCancelled');
 				}
 				else {
+					this.bHasLoaded = true;
 					this.emit('onLoaded', page);
+
 				}
 			}).catch((error) => {
 				console.log('Timed out navigating new page to ', this.url, error)
@@ -146,8 +160,11 @@ class PageLoader extends EventEmitter {
 	* 
 	*/
 	cancel() {
-		this.emit('cancel');
-		this.emit('onCancelled');
+		if (!this.bWascancelled && !this.bHasLoaded) {
+			this.emit('cancel');
+			this.emit('onCancelled');
+		}
+
 	}
 
 	/**
@@ -156,6 +173,7 @@ class PageLoader extends EventEmitter {
 	*
 	*/
 	onLoaded(callback) {
+
 		if (callback) {
 			this.once('onLoaded', callback)
 		}

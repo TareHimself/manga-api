@@ -1,138 +1,168 @@
 const cors = require('cors');
 const express = require('express');
+const { EventEmitter } = require('events');
 const { Initialize, getPage, closePage } = require('./pages');
 const app = express();
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 const port = process.argv.includes('debug') ? 8089 : 8089;
-const tasks = {
-  search: new Map(),
-  getChapters: new Map(),
-  readChapters: new Map(),
-};
+const tasks = new Map();
+
+function startNewTask(req, loader) {
+
+  const path = req._parsedUrl.pathname;
+  const id = req.query.id;
+
+
+  if (!tasks.get(path)) tasks.set(path, new Map());
+
+  console.log('started new task', path)
+  tasks.get(path).set(id, loader);
+}
+
+function clearTaskIfExists(req) {
+
+  const path = req._parsedUrl.pathname;
+  const id = req.query.id;
+
+  if (!tasks.get(path)) tasks.set(path, new Map());
+
+  const activeLoader = tasks.get(path).get(id);
+
+  if (!activeLoader) return;
+  console.log('cleared task', path)
+  tasks.get(path).delete(id);
+}
 
 app.get('/', async (req, res) => {
-
+  res.send('Pls Dont Spam Me')
 });
+
+app.use((req, res, next) => {
+
+  next();
+})
 
 app.get('/search', async (req, res) => {
 
   const q = (req.query.q || '').trim();
-  const id = req.query.id;
-
-  if (!id) {
-    res.send('All request require an identifier param "id"');
-    return;
-  }
-
-
 
   const loader = getPage();
 
-  if (tasks.search.get(id)) {
-    console.log("Stopping duplicate task");
-    tasks.search.get(id).cancel();
-  }
-
-  tasks.search.set(id, loader);
 
   loader.onLoaded(async (page) => {
 
-    tasks.search.delete(id);
-    let result = [];
 
-    if (q === '') {
-      result = await page.evaluate(async () => {
+    try {
 
-        const elements = Array.from(document.querySelectorAll('.latest_item'));
+      let result = [];
 
-        return elements.map((element) => {
-          const id = element.querySelector('a[class=\'name\']').getAttribute("href").split('\/')[2];
-          const chaptersString = element.querySelector('.chapter_box').children[0].textContent;
+      if (q === '') {
+        result = await page.evaluate(async () => {
 
-          console.log(id)
-          const tags = null;
+          const elements = Array.from(document.querySelectorAll('.latest_item'));
 
-          return {
-            id: id,
-            name: element.querySelector(':scope > a[class=\'name\']').textContent,
-            cover: `https://images.mangafreak.net/manga_images/${id.toLowerCase()}.jpg`,
-            chapters: chaptersString.slice(chaptersString.indexOf('r ') + 1).trim(),
-            tags: tags,
-          }
+          return elements.map((element) => {
+            const id = element.querySelector('a[class=\'name\']').getAttribute("href").split('\/')[2];
+            const chaptersString = element.querySelector('.chapter_box').children[0].textContent;
 
+            console.log(id)
+            const tags = null;
+
+            return {
+              id: id,
+              name: element.querySelector(':scope > a[class=\'name\']').textContent,
+              cover: `https://images.mangafreak.net/manga_images/${id.toLowerCase()}.jpg`,
+              chapters: chaptersString.slice(chaptersString.indexOf('r ') + 1).trim(),
+              tags: tags,
+            }
+
+          });
         });
-      });
-    }
-    else {
-      result = await page.evaluate(async () => {
+      }
+      else {
+        result = await page.evaluate(async () => {
 
-        const elements = Array.from(document.querySelectorAll('.manga_result .manga_search_item span h3')).map(element => element.parentElement);
+          const elements = Array.from(document.querySelectorAll('.manga_result .manga_search_item span h3')).map(element => element.parentElement);
 
-        return elements.map((element) => {
-          const id = element.querySelector('h3 a').getAttribute("href").split('\/')[2];
-          const chaptersString = element.querySelector('div').textContent;
+          return elements.map((element) => {
+            const id = element.querySelector('h3 a').getAttribute("href").split('\/')[2];
+            const chaptersString = element.querySelector('div').textContent;
 
-          const tags = Array.from(element.querySelectorAll(':scope > div a')).map(aTag => aTag.textContent);
+            const tags = Array.from(element.querySelectorAll(':scope > div a')).map(aTag => aTag.textContent);
 
-          return {
-            id: id,
-            name: element.querySelector('h3 a').textContent,
-            cover: `https://images.mangafreak.net/manga_images/${id.toLowerCase()}.jpg`,
-            chapters: chaptersString.slice(1, chaptersString.indexOf('Chapters')).trim(),
-            tags: tags,
-          }
+            return {
+              id: id,
+              name: element.querySelector('h3 a').textContent,
+              cover: `https://images.mangafreak.net/manga_images/${id.toLowerCase()}.jpg`,
+              chapters: chaptersString.slice(1, chaptersString.indexOf('Chapters')).trim(),
+              tags: tags,
+            }
 
+          });
         });
-      });
+      }
+
+      if (!loader.bWascancelled) {
+        res.send(result);
+      }
+    } catch (error) {
+      console.log(error.message)
+      res.send('Error test stopped execution')
     }
 
-
-
-    res.send(result);
-
-    console.log(page ? "Sucess" : "Cancled")
     await closePage(page);
-  })
+  });
 
-  loader.onCancled(() => {
-
-  })
+  loader.onCancelled(() => {
+    console.log('Request cancelled')
+  });
 
   if (q === '') {
-    loader.load(`https://w13.mangafreak.net/`);
+    loader.load(`https://w13.mangafreak.net/`, '.main_section');
   }
   else {
-    loader.load(`https://w13.mangafreak.net/Search/${encodeURIComponent(q)}`);
+    loader.load(`https://w13.mangafreak.net/Search/${encodeURIComponent(q)}`, '.main_section');
   }
 
+  req.once('close', function (err) {
+    loader.cancel();
+  });
 });
 
 app.get('/chapters/:manga', async (req, res) => {
   const manga = req.params.manga || '';
   const loader = getPage();
+
   loader.onLoaded(async (page) => {
+
+    await page.waitForSelector('.manga_series_list');
 
     const result = await page.evaluate(async () => {
 
-      return Array.from(document.querySelectorAll('.manga_series_list > table tbody tr')).map(element => {
-        const text = element.children[0].children[0].innerText;
+      return Array.from(document.querySelectorAll('td a:not([rel="NOFOLLOW"])')).map(element => {
+        const text = element.innerText;
         return text.slice(text.indexOf(' ')).trim().split(' ')[0].trim()
       })
     });
 
-    res.send(result);
+    if (!loader.bWascancelled) {
+      res.send(result);
+    }
 
     await closePage(page);
   })
 
-  loader.onCancled(() => {
+  loader.onCancelled(() => {
 
-  })
+  });
 
-  loader.load(`https://w13.mangafreak.net/Manga/${encodeURIComponent(manga)}`);
+  loader.load(`https://w13.mangafreak.net/Manga/${encodeURIComponent(manga)}`, '.main_section');
 
+  req.once('close', function (err) {
+    loader.cancel();
+  });
 });
 
 app.get('/chapters/:manga/:number', async (req, res) => {
@@ -142,6 +172,7 @@ app.get('/chapters/:manga/:number', async (req, res) => {
   const loader = getPage();
 
   loader.onLoaded(async (page) => {
+
     const result = await page.evaluate(async (manga, chapter) => {
 
       const lastPage = parseInt(document.querySelector('.read_selector').textContent.split('of')[1].trim(), 10);
@@ -150,17 +181,22 @@ app.get('/chapters/:manga/:number', async (req, res) => {
       return { base: baseUrl, total: lastPage };
     }, manga, chapter);
 
-    res.send(result);
+    if (!loader.bWascancelled) {
+      res.send(result);
+    }
 
     await closePage(page);
   })
 
-  loader.onCancled(() => {
+  loader.onCancelled(() => {
 
-  })
+  });
 
-  loader.load(`https://w13.mangafreak.net/Read1_${encodeURIComponent(manga)}_${chapter}`)
+  loader.load(`https://w13.mangafreak.net/Read1_${encodeURIComponent(manga)}_${chapter}`, '.main_section')
 
+  req.once('close', function (err) {
+    loader.cancel();
+  });
 
 });
 
