@@ -16,7 +16,7 @@ const browserArgs = [
 let showDebug = false;
 
 async function Initialize(browserCount = 1, debug = false) {
-
+	console.time('Browser Start');
 	if (browserCount > 7) process.setMaxListeners(0);
 
 	showDebug = debug;
@@ -46,6 +46,8 @@ async function Initialize(browserCount = 1, debug = false) {
 	console.log(`Generated Pages Pool, ${browsers.length} Browsers | ${pages.length} Pages.`)
 
 	if (showDebug) console.log(`${availablePages.length} Pages Available | ${pages.length} Pages Total`)
+
+	console.timeEnd('Browser Start');
 }
 
 function sleep(ms) {
@@ -93,6 +95,7 @@ class PageLoader extends EventEmitter {
 	*
 	*/
 	async load(url, selector = null) {
+		console.time(`Page Load To ${url}`);
 		this.url = url;
 		this.once('cancel', () => {
 			this.bWascancelled = true;
@@ -146,13 +149,16 @@ class PageLoader extends EventEmitter {
 				stopCallback();
 			})
 		} catch (error) {
-			console.log('Timed out navigating new page to ', this.url, error)
+			console.log('Timed out navigating new page to ', this.url, error);
+
 			if (this.bWascancelled) {
 				if (page) closePage(page);
 
 				this.emit('onCancelled');
 			}
 		}
+
+		console.timeEnd(`Page Load To ${url}`);
 	}
 
 	/**

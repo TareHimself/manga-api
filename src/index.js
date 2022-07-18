@@ -7,7 +7,6 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 const port = process.argv.includes('debug') ? 8089 : 8089;
-const tasks = new Map();
 
 function startNewTask(req, loader) {
 
@@ -45,7 +44,7 @@ app.use((req, res, next) => {
 })
 
 app.get('/search', async (req, res) => {
-
+  console.time('Search Request')
   const q = (req.query.q || '').trim();
 
   const loader = getPage();
@@ -57,56 +56,60 @@ app.get('/search', async (req, res) => {
     try {
 
       let result = [];
-
+      console.time(`Query for ${q}`);
       if (q === '') {
-        result = await page.evaluate(async () => {
 
-          const elements = Array.from(document.querySelectorAll('.latest_item'));
 
-          return elements.map((element) => {
-            const id = element.querySelector('a[class=\'name\']').getAttribute("href").split('\/')[2];
-            const chaptersString = element.querySelector('.chapter_box').children[0].textContent;
+        result = await page.evaluate(() => {
 
-            console.log(id)
-            const tags = null;
+          /* Fetches only popular
+          return Array.from(document.querySelectorAll('.popular-item-wrap')).map((element) => {
+            const aTag = element.querySelector('.widget-title a');
+            const img = element.querySelector('.widget-title a');
+            return {
+              id: aTag.href.split('\/'),
+              title: aTag.textContent,
+              cover: element.querySelector('img').src,
+            }
+          });*/
+
+          return Array.from(document.querySelectorAll('.page-item-detail.manga')).map((element) => {
+            const aTagBeforeImage = element.querySelector('.item-thumb.c-image-hover a');
 
             return {
-              id: id,
-              name: element.querySelector(':scope > a[class=\'name\']').textContent,
-              cover: `https://images.mangafreak.net/manga_images/${id.toLowerCase()}.jpg`,
-              chapters: chaptersString.slice(chaptersString.indexOf('r ') + 1).trim(),
-              tags: tags,
-            }
+              id: aTagBeforeImage.href.split('\/')[4],
+              title: element.querySelector('.item-summary .post-title.font-title h3 a').textContent,
+              cover: aTagBeforeImage.children[0].getAttribute('data-src'),
 
-          });
+            }
+          })
+
         });
+
       }
       else {
-        result = await page.evaluate(async () => {
-
-          const elements = Array.from(document.querySelectorAll('.manga_result .manga_search_item span h3')).map(element => element.parentElement);
-
-          return elements.map((element) => {
-            const id = element.querySelector('h3 a').getAttribute("href").split('\/')[2];
-            const chaptersString = element.querySelector('div').textContent;
-
-            const tags = Array.from(element.querySelectorAll(':scope > div a')).map(aTag => aTag.textContent);
+        result = await page.evaluate(() => {
+          return Array.from(document.querySelectorAll('.row.c-tabs-item__content')).map((element) => {
+            const imageElement = element.querySelector('img');
+            const titleATag = element.querySelector('.post-title h3 a')
 
             return {
-              id: id,
-              name: element.querySelector('h3 a').textContent,
-              cover: `https://images.mangafreak.net/manga_images/${id.toLowerCase()}.jpg`,
-              chapters: chaptersString.slice(1, chaptersString.indexOf('Chapters')).trim(),
-              tags: tags,
-            }
+              id: titleATag.href.split('\/')[4],
+              title: titleATag.textContent,
+              cover: imageElement.getAttribute('data-src'),
 
+            }
           });
         });
       }
+
+      console.timeEnd(`Query for ${q}`);
 
       if (!loader.bWascancelled) {
         res.send(result);
+        console.timeEnd('Search Request')
       }
+
     } catch (error) {
       console.log(error.message)
       res.send('Error test stopped execution')
@@ -117,13 +120,14 @@ app.get('/search', async (req, res) => {
 
   loader.onCancelled(() => {
     console.log('Request cancelled')
+    console.timeEnd('Search Request')
   });
 
   if (q === '') {
-    loader.load(`https://w13.mangafreak.net/`, '.main_section');
+    loader.load(`https://mangaclash.com/`, '.site-content');
   }
   else {
-    loader.load(`https://w13.mangafreak.net/Search/${encodeURIComponent(q)}`, '.main_section');
+    loader.load(`https://mangaclash.com/?post_type=wp-manga&s=${encodeURIComponent(q)}`, '.site-content');
   }
 
   req.once('close', function (err) {
@@ -131,20 +135,25 @@ app.get('/search', async (req, res) => {
   });
 });
 
-app.get('/chapters/:manga', async (req, res) => {
+app.get('/manga/:manga', async (req, res) => {
   const manga = req.params.manga || '';
   const loader = getPage();
 
   loader.onLoaded(async (page) => {
 
-    await page.waitForSelector('.manga_series_list');
-
     const result = await page.evaluate(async () => {
 
-      return Array.from(document.querySelectorAll('td a:not([rel="NOFOLLOW"])')).map(element => {
-        const text = element.innerText;
-        return text.slice(text.indexOf(' ')).trim().split(' ')[0].trim()
-      })
+      const aTag = document.querySelector('.summary_image a');
+
+      return {
+        id: aTag.href.split('\/')[4],
+        title: document.querySelector('.post-title h1').textContent.slice(1),
+        cover: aTag.children[0].getAttribute('data-src'),
+        tags: Array.from(document.querySelectorAll('.genres-content a')).map(e => e.textContent),
+        status: document.querySelector('.post-status .post-content_item .summary-content').textContent.replace('\n', '').replace('\t', ''),
+        description: document.querySelector('p').textContent
+
+      }
     });
 
     if (!loader.bWascancelled) {
@@ -158,14 +167,49 @@ app.get('/chapters/:manga', async (req, res) => {
 
   });
 
-  loader.load(`https://w13.mangafreak.net/Manga/${encodeURIComponent(manga)}`, '.main_section');
+  loader.load(`https://mangaclash.com/manga/${encodeURIComponent(manga)}/`, '.site-content');
 
   req.once('close', function (err) {
     loader.cancel();
   });
 });
 
-app.get('/chapters/:manga/:number', async (req, res) => {
+app.get('/manga/:manga/chapters/', async (req, res) => {
+  const manga = req.params.manga || '';
+  const loader = getPage();
+
+  loader.onLoaded(async (page) => {
+
+    const result = await page.evaluate(async () => {
+      const items = []
+
+
+      return Array.from(document.querySelectorAll('.wp-manga-chapter a')).map(a => a.href.split('\/').reverse()[1].slice(8).replaceAll('-', '.')).filter((a) => {
+        const comparison = !items.includes(a);
+        if (comparison) items.push(a);
+        return comparison;
+      });
+    });
+
+    if (!loader.bWascancelled) {
+      res.send(result);
+    }
+
+    await closePage(page);
+  })
+
+  loader.onCancelled(() => {
+
+  });
+
+  loader.load(`https://mangaclash.com/manga/${encodeURIComponent(manga)}/`, '.site-content');
+
+  req.once('close', function (err) {
+    loader.cancel();
+  });
+});
+
+app.get('/manga/:manga/chapters/:number', async (req, res) => {
   const manga = (req.params.manga || '').toLocaleLowerCase();
   const chapter = req.params.number || "1";
 
@@ -175,10 +219,7 @@ app.get('/chapters/:manga/:number', async (req, res) => {
 
     const result = await page.evaluate(async (manga, chapter) => {
 
-      const lastPage = parseInt(document.querySelector('.read_selector').textContent.split('of')[1].trim(), 10);
-
-      const baseUrl = `https://images.mangafreak.net/mangas/${encodeURIComponent(manga)}/${encodeURIComponent(manga)}_${chapter}/${encodeURIComponent(manga)}_${chapter}_{index}.jpg`
-      return { base: baseUrl, total: lastPage };
+      return Array.from(document.querySelectorAll('.reading-content .page-break.no-gaps img')).map(img => img.getAttribute('data-src').replaceAll('\n', '').replaceAll('\t', ''))
     }, manga, chapter);
 
     if (!loader.bWascancelled) {
@@ -192,7 +233,7 @@ app.get('/chapters/:manga/:number', async (req, res) => {
 
   });
 
-  loader.load(`https://w13.mangafreak.net/Read1_${encodeURIComponent(manga)}_${chapter}`, '.main_section')
+  loader.load(`https://mangaclash.com/manga/${encodeURIComponent(manga)}/chapter-${encodeURIComponent(chapter)}/`, '.site-content')
 
   req.once('close', function (err) {
     loader.cancel();
