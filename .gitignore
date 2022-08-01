@@ -126,3 +126,7 @@ dist
 .yarn/install-state.gz
 .pnp.*
 /wallpapers
+
+*.db
+*.db-wal
+*.db-shm
