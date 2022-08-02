@@ -42,7 +42,7 @@ class MangaSource {
       try {
         res.send(JSON.parse(cachedData));
         return;
-      } catch (error) {}
+      } catch (error) { }
     }
 
     const { url, selector } = await this.getSearchUrl(search);
@@ -59,7 +59,7 @@ class MangaSource {
       await closePage(page);
     });
 
-    loader.onCancelled(() => {});
+    loader.onCancelled(() => { });
 
     loader.load(url || "", selector || "");
 
@@ -72,7 +72,7 @@ class MangaSource {
     return { url: "", selector: "" };
   }
 
-  async getSearchFromPage(page, search) {}
+  async getSearchFromPage(page, search) { }
 
   async getManga(req, res) {
     const manga = (req.params.manga || "").trim();
@@ -83,7 +83,7 @@ class MangaSource {
       try {
         res.send(JSON.parse(cachedData));
         return;
-      } catch (error) {}
+      } catch (error) { }
     }
 
     const { url, selector } = await this.getMangaUrl(manga);
@@ -106,7 +106,7 @@ class MangaSource {
       await closePage(page);
     });
 
-    loader.onCancelled(() => {});
+    loader.onCancelled(() => { });
 
     loader.load(url, selector || "");
 
@@ -136,7 +136,7 @@ class MangaSource {
       try {
         res.send(JSON.parse(cachedData));
         return;
-      } catch (error) {}
+      } catch (error) { }
     }
 
     const { url, selector } = await this.getChaptersUrl(manga);
@@ -158,7 +158,7 @@ class MangaSource {
       await closePage(page);
     });
 
-    loader.onCancelled(() => {});
+    loader.onCancelled(() => { });
 
     loader.load(url || "", selector || "");
 
@@ -181,7 +181,7 @@ class MangaSource {
 
     const cachedData = getCachedItem(
       this.id,
-      chapter,
+      manga + chapter,
       "chapter",
       CHAPTER_CACHE_TIME
     );
@@ -190,7 +190,7 @@ class MangaSource {
       try {
         res.send(JSON.parse(cachedData));
         return;
-      } catch (error) {}
+      } catch (error) { }
     }
 
     const { url, selector } = await this.getChapterUrl(manga, chapter);
@@ -207,13 +207,13 @@ class MangaSource {
 
       if (!loader.bWascancelled) {
         res.send(result);
-        tCacheItem.deferred(this.id, chapter, "chapter", result);
+        tCacheItem.deferred(this.id, manga + chapter, "chapter", result);
       }
 
       await closePage(page);
     });
 
-    loader.onCancelled(() => {});
+    loader.onCancelled(() => { });
 
     loader.load(url || "", selector || "");
 
