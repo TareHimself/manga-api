@@ -5,10 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const app = express();
 
-app.get("/", async (req, res) => {
-  res.send("Pls Dont Spam Me");
-});
-
+const sourcesInstances = [];
 const sources = fs
   .readdirSync(path.join(__dirname, "sources"))
   .map((file) => path.join(__dirname, "sources", file));
@@ -16,6 +13,9 @@ const sources = fs
 sources.forEach((sourcePath) => {
   try {
     const source = require(sourcePath);
+
+    sourcesInstances.push(source);
+
     app.get(`/${source.id}/search`, source.search.bind(source));
     app.get(`/${source.id}/:manga`, source.getManga.bind(source));
     app.get(`/${source.id}/:manga/chapters/`, source.getChapters.bind(source));
@@ -26,6 +26,10 @@ sources.forEach((sourcePath) => {
   } catch (error) {
     console.log(sourcePath, error);
   }
+});
+
+app.get('/', async (req, res) => {
+  res.send(sourcesInstances.map(source => ({ id: source.id, name: source.name })));
 });
 
 Initialize(1).then(() => {

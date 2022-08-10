@@ -1,7 +1,7 @@
 "use strict";
 const MangaSource = require("../mangaSource");
 
-class FSSource extends MangaSource {
+class Source extends MangaSource {
   async getSearchUrl(search) {
     return {
       url: search
@@ -104,4 +104,4 @@ class FSSource extends MangaSource {
   }
 }
 
-module.exports = new FSSource("fs");
+module.exports = new Source("fs", 'flame scans');

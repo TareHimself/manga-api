@@ -21,8 +21,9 @@ const CHAPTERS_CACHE_TIME = 2.628e6; // cache for 1month
  *	getChapterFromPage
  */
 class MangaSource {
-  constructor(id) {
+  constructor(id, name) {
     this.id = id;
+    this.name = name;
   }
 
   async search(req, res) {

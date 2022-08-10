@@ -1,13 +1,13 @@
 "use strict";
 const MangaSource = require("../mangaSource");
 
-class MCSource extends MangaSource {
+class Source extends MangaSource {
   async getSearchUrl(search) {
     return {
       url: search
         ? `https://mangaclash.com/?post_type=wp-manga&s=${encodeURIComponent(
-            search
-          )}`
+          search
+        )}`
         : `https://mangaclash.com/`,
       selector: ".site-content",
     };
@@ -117,4 +117,4 @@ class MCSource extends MangaSource {
   }
 }
 
-module.exports = new MCSource("mc");
+module.exports = new Source("mc", 'mangaclash');

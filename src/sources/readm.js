@@ -1,0 +1,105 @@
+"use strict";
+const MangaSource = require("../mangaSource");
+
+class Source extends MangaSource {
+  async getSearchUrl(search) {
+    return {
+      url: `https://readm.org/`,
+      selector: "#tvSearch",
+    };
+  }
+
+  async getSearchFromPage(page, search) {
+    if (!search) {
+      return await page.evaluate(async () => {
+        return Array.from(document.querySelectorAll('.owl-stage .item')).map((item) => {
+          return {
+            id: item.children[0].href.match(/manga\/([^\/]+)/gm)[0].split('/')[1],
+            title: item.children[1].children[0].textContent.trim(),
+            cover: item.children[0].children[0].src.replace(/_([0-9]+)x0/gm, '_198x0')
+          }
+        })
+      });
+
+    } else {
+      try {
+        await page.focus('#tvSearch')
+        await page.keyboard.type(search);
+        await page.waitForSelector("#search-response .dark-segment", { timeout: 500 });
+
+        return await page.evaluate(async () => {
+          return Array.from(document.querySelectorAll('#search-response .segment-poster')).map((li) => {
+            return {
+              id: li.querySelector('a').href.trim().split('/').reverse()[0],
+              title: li.querySelector('a h2').textContent.trim(),
+              cover: li.querySelector('img').src.replace(/_([0-9]+)x0/gm, '_198x0')
+            }
+          })
+        });
+      } catch (error) {
+        return [];
+      }
+    }
+  }
+
+  async getMangaUrl(manga) {
+    return {
+      url: `https://readm.org/manga/${encodeURIComponent(manga)}/`,
+      selector: "#content",
+    };
+  }
+
+  async getMangaFromPage(page, manga) {
+    return await page.evaluate(async () => {
+      const wrapper = document.querySelector('#series-profile-wrapper')
+
+      return {
+        id: document.querySelector(".page-title").parentElement.href.split('/').reverse()[0],
+        title: document.querySelector(".page-title").textContent.trim(),
+        cover: wrapper.querySelector('img').src,
+        tags: Array.from(wrapper.querySelectorAll(".ui.list .item a")).map(
+          (a) => a.textContent
+        ),
+        status: document
+          .querySelector(".series-status.aqua")
+          .textContent.trim(),
+        description: document.querySelector(".series-summary-wrapper").children[2].textContent,
+      }
+    });
+  }
+
+  async getChaptersUrl(manga) {
+    return {
+      url: `https://readm.org/manga/${encodeURIComponent(manga)}/`,
+      selector: "#content",
+    };
+  }
+
+  async getChaptersFromPage(page, manga) {
+    return await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('.item.season_start a')).map(a => {
+        return {
+          title: a.textContent.trim(),
+          id: a.href.match(/manga\/[^\/]+\/([^\/]+)/gm)[0].split('/').reverse()[0]
+        }
+      })
+    });
+  }
+
+  async getChapterUrl(manga, chapter) {
+    return {
+      url: `https://readm.org/manga/${encodeURIComponent(
+        manga
+      )}/${encodeURIComponent(chapter)}/all-pages`,
+      selector: ".ch-images.ch-image-container",
+    };
+  }
+
+  async getChapterFromPage(page, manga, chapter) {
+    return await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('.ch-images.ch-image-container img')).map(img => img.src);
+    });
+  }
+}
+
+module.exports = new Source("rm", 'readm.org');
