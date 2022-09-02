@@ -111,7 +111,7 @@ class Source extends MangaSource {
       return Array.from(
         document.querySelectorAll(".reading-content .page-break.no-gaps img")
       ).map((img) =>
-        img.getAttribute("data-src").replaceAll("\n", "").replaceAll("\t", "")
+        img.getAttribute("data-src").replaceAll("\t", "").trim()
       );
     });
   }

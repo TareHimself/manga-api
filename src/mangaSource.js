@@ -36,7 +36,7 @@ class MangaSource {
       this.id,
       search,
       `search`,
-      MANGA_CACHE_TIME
+      SEARCH_CACHE_TIME
     );
 
     if (cachedData) {

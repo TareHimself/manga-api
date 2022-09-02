@@ -1,4 +1,5 @@
 "use strict";
+const e = require("cors");
 const MangaSource = require("../mangaSource");
 
 class Source extends MangaSource {
@@ -22,7 +23,7 @@ class Source extends MangaSource {
             title: d.children[1].children[0].children[0].children[0].textContent
               .slice(1)
               .trim(),
-            cover: d.children[0].children[0].children[0].src,
+            cover: d.children[0].children[0].querySelector('img').src,
           };
         });
       });
@@ -32,7 +33,7 @@ class Source extends MangaSource {
           return {
             id: a.getAttribute("href").split("/")[4],
             title: a.children[1].children[1].textContent.slice(1).trim(),
-            cover: a.children[0].children[1].src,
+            cover: a.children[0].querySelector('img').src,
           };
         });
       });
@@ -47,6 +48,7 @@ class Source extends MangaSource {
   }
 
   async getMangaFromPage(page, manga) {
+    console.log(manga)
     return await page.evaluate(async () => {
       return {
         id: document
@@ -98,7 +100,7 @@ class Source extends MangaSource {
   async getChapterFromPage(page, manga, chapter) {
     return await page.evaluate(async () => {
       return Array.from(document.querySelectorAll("#readerarea img")).map(
-        (img) => img.src
+        (img) => img.src.trim()
       );
     });
   }

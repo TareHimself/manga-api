@@ -4,19 +4,19 @@ const MangaSource = require("../mangaSource");
 class Source extends MangaSource {
   async getSearchUrl(search) {
     return {
-      url: `https://readm.org/`,
-      selector: "#tvSearch",
+      url: search ? `https://readm.org/` : 'https://readm.org/latest-releases/1',
+      selector: search ? "#tvSearch" : '.clearfix.latest-updates',
     };
   }
 
   async getSearchFromPage(page, search) {
     if (!search) {
       return await page.evaluate(async () => {
-        return Array.from(document.querySelectorAll('.owl-stage .item')).map((item) => {
+        return Array.from(document.querySelectorAll('.clearfix.latest-updates .segment-poster-sm')).map((item) => {
           return {
-            id: item.children[0].href.match(/manga\/([^\/]+)/gm)[0].split('/')[1],
-            title: item.children[1].children[0].textContent.trim(),
-            cover: item.children[0].children[0].src.replace(/_([0-9]+)x0/gm, '_198x0')
+            id: item.querySelector('.truncate a').href.match(/manga\/([^\/]+)/gm)[0].split('/')[1],
+            title: item.querySelector('.truncate a').textContent.trim(),
+            cover: window.location.origin + item.querySelector('img').getAttribute('data-src').replace(/_([0-9]+)x0/gm, '_198x0')
           }
         })
       });
@@ -25,7 +25,7 @@ class Source extends MangaSource {
       try {
         await page.focus('#tvSearch')
         await page.keyboard.type(search);
-        await page.waitForSelector("#search-response .dark-segment", { timeout: 500 });
+        await page.waitForSelector("#search-response .dark-segment", { timeout: 3000 });
 
         return await page.evaluate(async () => {
           return Array.from(document.querySelectorAll('#search-response .segment-poster')).map((li) => {
@@ -97,9 +97,9 @@ class Source extends MangaSource {
 
   async getChapterFromPage(page, manga, chapter) {
     return await page.evaluate(() => {
-      return Array.from(document.querySelectorAll('.ch-images.ch-image-container img')).map(img => img.src);
+      return Array.from(document.querySelectorAll('.ch-images.ch-image-container img')).map(img => img.src.trim());
     });
   }
 }
 
-module.exports = new Source("rm", 'readm.org');
+module.exports = new Source("rm", 'readm');
