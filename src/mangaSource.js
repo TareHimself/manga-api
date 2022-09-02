@@ -62,6 +62,7 @@ class MangaSource {
 
     loader.onCancelled(() => { });
 
+    console.log(url, selector)
     loader.load(url || "", selector || "");
 
     req.once("close", function (err) {

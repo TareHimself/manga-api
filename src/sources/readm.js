@@ -45,7 +45,7 @@ class Source extends MangaSource {
   async getMangaUrl(manga) {
     return {
       url: `https://readm.org/manga/${encodeURIComponent(manga)}/`,
-      selector: "#content",
+      selector: ".page-title",
     };
   }
 
@@ -62,7 +62,7 @@ class Source extends MangaSource {
         ),
         status: document
           .querySelector(".series-status.aqua")
-          .textContent.trim(),
+          ?.textContent?.trim() || 'ongoing',
         description: document.querySelector(".series-summary-wrapper").children[2].textContent,
       }
     });
@@ -71,7 +71,7 @@ class Source extends MangaSource {
   async getChaptersUrl(manga) {
     return {
       url: `https://readm.org/manga/${encodeURIComponent(manga)}/`,
-      selector: "#content",
+      selector: ".page-title",
     };
   }
 
