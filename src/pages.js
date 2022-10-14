@@ -40,6 +40,8 @@ async function Initialize(browserCount = 1, debug = false) {
         "Mozilla/5.0 (Windows NT 5.1; rv:5.0) Gecko/20100101 Firefox/5.0"
       );
 
+      await newPage.setDefaultNavigationTimeout(0);
+
       availablePages.push(newPage);
 
       pages.push(newPage);

@@ -51,18 +51,23 @@ class MangaSource {
     const loader = getPage();
 
     loader.onLoaded(async (page) => {
-      const result = await this.getSearchFromPage(page, search);
+      try {
+        const result = await this.getSearchFromPage(page, search);
 
-      if (!loader.bWascancelled) {
-        res.send(result);
-        tCacheItem.deferred(this.id, search, `search`, result);
+        if (!loader.bWascancelled) {
+          res.send(result);
+          tCacheItem.deferred(this.id, search, `search`, result);
+        }
+
+      } catch (error) {
+        console.log("Error making search", this.name, search, '\n', error)
+        res.sendStatus(500)
       }
       await closePage(page);
     });
 
     loader.onCancelled(() => { });
 
-    console.log(url, selector)
     loader.load(url || "", selector || "");
 
     req.once("close", function (err) {
@@ -98,14 +103,21 @@ class MangaSource {
     const loader = getPage();
 
     loader.onLoaded(async (page) => {
-      const result = await this.getMangaFromPage(page, manga);
+      try {
+        const result = await this.getMangaFromPage(page, manga);
 
-      if (!loader.bWascancelled) {
-        res.send(result);
-        tCacheItem.deferred(this.id, manga, "manga", result);
+        if (!loader.bWascancelled) {
+          res.send(result);
+          tCacheItem.deferred(this.id, manga, "manga", result);
+        }
+
+
+      } catch (error) {
+        console.log("Error fetching Manga", this.name, manga, '\n', error)
+        res.sendStatus(500)
       }
-
       await closePage(page);
+
     });
 
     loader.onCancelled(() => { });
@@ -150,11 +162,16 @@ class MangaSource {
     const loader = getPage();
 
     loader.onLoaded(async (page) => {
-      const result = await this.getChaptersFromPage(page, manga);
+      try {
+        const result = await this.getChaptersFromPage(page, manga);
 
-      if (!loader.bWascancelled) {
-        res.send(result);
-        tCacheItem.deferred(this.id, manga, "chapters", result);
+        if (!loader.bWascancelled) {
+          res.send(result);
+          tCacheItem.deferred(this.id, manga, "chapters", result);
+        }
+      } catch (error) {
+        console.log("Error fetching chapters", this.name, manga, '\n', error)
+        res.sendStatus(500)
       }
 
       await closePage(page);
@@ -205,13 +222,18 @@ class MangaSource {
     const loader = getPage();
 
     loader.onLoaded(async (page) => {
-      const result = await this.getChapterFromPage(page, manga, chapter);
+      try {
+        const result = await this.getChapterFromPage(page, manga, chapter);
 
-      if (!loader.bWascancelled) {
-        res.send(result);
-        tCacheItem.deferred(this.id, manga + chapter, "chapter", result);
+        if (!loader.bWascancelled) {
+          res.send(result);
+          tCacheItem.deferred(this.id, manga + chapter, "chapter", result);
+        }
+
+      } catch (error) {
+        console.log("Error fetching chapter", this.name, manga, chapter, '\n', error)
+        res.sendStatus(500)
       }
-
       await closePage(page);
     });
 

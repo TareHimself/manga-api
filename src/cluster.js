@@ -17,10 +17,10 @@ sources.forEach((sourcePath) => {
     sourcesInstances.push(source);
 
     app.get(`/${source.id}/search`, source.search.bind(source));
-    app.get(`/${source.id}/:manga`, source.getManga.bind(source));
-    app.get(`/${source.id}/:manga/chapters/`, source.getChapters.bind(source));
+    app.get(`/${source.id}/manga/:manga`, source.getManga.bind(source));
+    app.get(`/${source.id}/chapters/:manga/`, source.getChapters.bind(source));
     app.get(
-      `/${source.id}/:manga/chapters/:number`,
+      `/${source.id}/chapters/:manga/:number`,
       source.getChapter.bind(source)
     );
   } catch (error) {
