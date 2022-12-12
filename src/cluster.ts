@@ -1,16 +1,14 @@
 const { Initialize } = require("./pages");
-const fs = require("fs");
-const path = require("path");
-const process = require('process')
-const express = require('express')
-const { Client } = require('express-websocket-proxy')
+import * as fs from 'fs'
+import path from 'path'
+import process from 'process';
+import { Client } from 'express-websocket-proxy';
+import { MangaSource } from './mangaSource';
 
-const bUseSockets = !process.argv.includes('--sockets')
+const app = new Client("wss://proxy.oyintare.dev");
+const PATH_PREFIX = 'manga/';
 
-const app = bUseSockets ? new Client("wss://proxy.oyintare.dev") : express();
-const PATH_PREFIX = bUseSockets ? 'manga/' : '/';
-
-const sourcesInstances = [];
+const sourcesInstances: MangaSource[] = [];
 const sources = fs
   .readdirSync(path.join(__dirname, "sources"))
   .map((file) => path.join(__dirname, "sources", file));
@@ -18,7 +16,7 @@ const sources = fs
 
 sources.forEach((sourcePath) => {
   try {
-    const source = require(sourcePath);
+    const source = require(sourcePath).default as MangaSource;
 
     sourcesInstances.push(source);
     app.get(`${PATH_PREFIX}${source.id}/search`, source.search.bind(source));
@@ -33,17 +31,8 @@ sources.forEach((sourcePath) => {
 });
 
 app.get(PATH_PREFIX, async (req) => {
-  req.sendBody(sourcesInstances.map(source => ({ id: source.id, name: source.name })));
+  req.sendBody(sourcesInstances.map(source => ({ id: source.id, name: source.displayName })));
 });
 
-Initialize(1).then(() => {
-  if (bUseSockets) {
-    app.connect()
-    console.log('Connected to', app.url)
-  } else {
-    app.listen(8089, async () => {
-      console.log(`http://localhost:${8089}/`);
-    });
-  }
-
-});
+app.connect()
+console.log('Connected to', app.url)

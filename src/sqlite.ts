@@ -1,19 +1,65 @@
-"use strict";
-const path = require("path");
-const db = require("better-sqlite3")(path.join(__dirname, "./db/database.db"), {
-  fileMustExist: true,
-});
+import path from 'path'
 
-function pad(number) {
+import Database from 'better-sqlite3';
+import * as fs from 'fs';
+import cluster from 'cluster'
+const DATABASE_DIR = path.join(process.cwd(), 'db')
+const db = Database(path.join(DATABASE_DIR, 'cache.db'))
+
+if (cluster.isPrimary) {
+
+  const initialStatements = [
+    `
+    CREATE TABLE IF NOT EXISTS cache(
+        src TEXT DEFAULT '',
+        id TEXT DEFAULT '',
+        type TEXT DEFAULT '',
+        data TEXT DEFAULT '',
+        timestamp INTEGER DEFAULT 0,
+        UNIQUE(src, id)
+    );
+    `,
+    `
+    CREATE INDEX IF NOT EXISTS idx_cache
+    ON cache (src,id,type);
+    `,
+  ];
+
+  // fix concurrency issues
+  db.pragma("journal_mode = WAL");
+
+  db.pragma("wal_checkpoint(RESTART)");
+
+  const checkDbSize = async () => {
+    try {
+      const stats = await fs.promises.stat(path.join(DATABASE_DIR, "cache.db-wal"))
+      if (stats.size / (1024 * 1024) > 50) {
+        db.pragma("wal_checkpoint(RESTART)");
+      }
+    } catch (error: any) {
+      if (error.code !== "ENOENT") throw error;
+    }
+
+  }
+  setInterval(checkDbSize,
+    5000
+  ).unref();
+
+  db.transaction((statements) => {
+    statements.forEach((statement) => {
+      db.prepare(statement).run();
+    });
+  }).immediate(initialStatements);
+}
+
+export function pad(number: number) {
   return number < 10 ? `0${number}` : `${number}`;
 }
 
 /**
  * Converts a date object to an integer formated as YYYYMMDDHHMMSS
- * @param {Date} date the date object to convert
- * @returns {number}
  */
-function TimeToInteger(date) {
+export function TimeToInteger(date: Date) {
   return parseInt(
     `${date.getUTCFullYear()}${pad(date.getUTCMonth())}${pad(
       date.getUTCDate()
@@ -23,7 +69,7 @@ function TimeToInteger(date) {
     10
   );
 }
-
+export type cacheType = 'search' | 'manga' | 'chapter' | 'chapters'
 /**
  * Fetches an item from the cache if it exists
  * @param {string} src the source the item was scraped from
@@ -32,7 +78,7 @@ function TimeToInteger(date) {
  * @param {number} ttl items that have been stored longer than this time(seconds) will be deleted
  * @returns {any | undefined}
  */
-function getCachedItem(src, id, type, ttl = 60) {
+export function getCachedItem(src: string, id: string, type: cacheType, ttl: number = 60) {
   const now = new Date();
 
   now.setSeconds(now.getSeconds() - ttl);
@@ -59,7 +105,7 @@ function getCachedItem(src, id, type, ttl = 60) {
  * @param {string} type the item type
  * @param {number} data the actual item to store
  */
-const tCacheItem = db.transaction((src, id, type, data) => {
+const tCacheItem = db.transaction((src: string, id: string, type: cacheType, data: object) => {
   db.prepare(
     `REPLACE INTO cache (src,id,type,data,timestamp) VALUES(@src,@id,@type,@data,@timestamp)`
   ).run({
@@ -71,7 +117,7 @@ const tCacheItem = db.transaction((src, id, type, data) => {
   });
 });
 
-module.exports = {
-  getCachedItem,
+export {
   tCacheItem,
-};
+  db
+}

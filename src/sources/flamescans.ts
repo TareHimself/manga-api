@@ -1,16 +1,15 @@
-"use strict";
-const e = require("cors");
-const MangaSource = require("../mangaSource");
+import { MangaSource } from '../mangaSource'
 
-class Source extends MangaSource {
+
+const source = new MangaSource('fs', 'flame scans', {
   async getSearchUrl(search) {
     return {
       url: search
-        ? `https://flamescans.org/?s=${encodeURIComponent(search)}`
-        : `https://flamescans.org/`,
+        ? `https://flamescans.org/ahhh/?s=${encodeURIComponent(search)}`
+        : `https://flamescans.org/ahhh/`,
       selector: "#content",
     };
-  }
+  },
 
   async getSearchFromPage(page, search) {
     if (!search) {
@@ -19,11 +18,11 @@ class Source extends MangaSource {
           document.querySelectorAll(".latest-updates .bsx")
         ).map((d) => {
           return {
-            id: d.children[0].getAttribute("href").split("/")[4],
-            title: d.children[1].children[0].children[0].children[0].textContent
+            id: d.children[0].getAttribute("href")!.split("/").reverse()[1],
+            title: d.children[1].children[0].children[0].children[0].textContent!
               .slice(1)
               .trim(),
-            cover: d.children[0].children[0].querySelector('img').src,
+            cover: d.children[0].children[0].querySelector('img')!.src,
           };
         });
       });
@@ -31,79 +30,79 @@ class Source extends MangaSource {
       return await page.evaluate(() => {
         return Array.from(document.querySelectorAll(".listupd a")).map((a) => {
           return {
-            id: a.getAttribute("href").split("/")[4],
-            title: a.children[1].children[1].textContent.slice(1).trim(),
-            cover: a.children[0].querySelector('img').src,
+            id: a.getAttribute("href")!.split("/").reverse()[1],
+            title: a.children[1].children[1].textContent!.slice(1).trim(),
+            cover: a.children[0].querySelector('img')!.src,
           };
         });
       });
     }
-  }
+  },
 
   async getMangaUrl(manga) {
     return {
-      url: `https://flamescans.org/series/${encodeURIComponent(manga)}/`,
+      url: `https://flamescans.org/ahhh/series/${encodeURIComponent(manga)}/`,
       selector: "#content",
     };
-  }
+  },
 
   async getMangaFromPage(page, manga) {
-    console.log(manga)
     return await page.evaluate(async () => {
       return {
         id: document
-          .querySelector('meta[name="url"]')
-          .getAttribute("content")
-          .split("/")[4],
-        title: document.querySelector(".entry-title").textContent.trim(),
-        cover: document.querySelector(".attachment-.size-.wp-post-image").src,
+          .querySelector('meta[name="url"]')!
+          .getAttribute("content")!
+          .split("/").reverse()[1],
+        title: document.querySelector(".entry-title")!.textContent!.trim(),
+        cover: document.querySelector(".attachment-.size-.wp-post-image")!.getAttribute('src')!,
         tags: Array.from(document.querySelectorAll('a[rel="tag"]')).map(
-          (a) => a.textContent
+          (a) => a.textContent || ''
         ),
-        status: document.querySelector(".status").children[1].textContent,
+        status: document.querySelector(".status")!.children[1].textContent || "",
         description: Array.from(
-          document.querySelector('div[itemprop="description"]').children
+          document.querySelector('div[itemprop="description"]')!.children
         )
           .map((c) => c.textContent)
-          .reduce((p, c) => (p += c), ""),
+          .reduce((p, c) => (p! += c!), "") || "",
       };
     });
-  }
+  },
 
   async getChaptersUrl(manga) {
+
     return {
-      url: `https://flamescans.org/series/${encodeURIComponent(manga.trim())}/`,
+      url: `https://flamescans.org/ahhh/series/${encodeURIComponent(manga.trim())}/`,
       selector: "#chapterlist",
     };
-  }
+  },
 
   async getChaptersFromPage(page, manga) {
     return await page.evaluate(async () => {
       return Array.from(document.querySelectorAll("#chapterlist ul a")).map(
         (a) => {
-          const num = a.href.split("chapter-").reverse()[0].replaceAll("/", "");
+          const num = a.getAttribute('href')!.split("chapter-").reverse()[0].replaceAll("/", "");
           return { title: num.replaceAll("-", "."), id: "chapter-" + num };
         }
       );
     });
-  }
+  },
 
   async getChapterUrl(manga, chapter) {
     return {
-      url: `https://flamescans.org/${encodeURIComponent(
+      url: `https://flamescans.org/ahhh/${encodeURIComponent(
         manga
       )}-${encodeURIComponent(chapter)}/`,
       selector: "#readerarea",
     };
-  }
+  },
 
   async getChapterFromPage(page, manga, chapter) {
     return await page.evaluate(async () => {
       return Array.from(document.querySelectorAll("#readerarea img")).map(
-        (img) => img.src.trim()
+        (img) => img.getAttribute('src')!.trim()
       );
     });
   }
-}
+})
 
-module.exports = new Source("fs", 'flame scans');
+export default source

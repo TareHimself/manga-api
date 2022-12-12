@@ -1,7 +1,7 @@
-"use strict";
-const MangaSource = require("../mangaSource");
+import { MangaSource } from '../mangaSource'
 
-class Source extends MangaSource {
+
+const source = new MangaSource("mc", 'mangaclash', {
   async getSearchUrl(search) {
     return {
       url: search
@@ -11,7 +11,7 @@ class Source extends MangaSource {
         : `https://mangaclash.com/`,
       selector: ".site-content",
     };
-  }
+  },
 
   async getSearchFromPage(page, search) {
     if (!search) {
@@ -21,14 +21,14 @@ class Source extends MangaSource {
         ).map((element) => {
           const aTagBeforeImage = element.querySelector(
             ".item-thumb.c-image-hover a"
-          );
+          ) as HTMLAnchorElement;
 
           return {
             id: aTagBeforeImage.href.split("/")[4],
             title: element.querySelector(
               ".item-summary .post-title.font-title h3 a"
-            ).textContent,
-            cover: aTagBeforeImage.children[0].getAttribute("data-src"),
+            )!.textContent || "",
+            cover: aTagBeforeImage.children[0].getAttribute("data-src") || "",
           };
         });
       });
@@ -37,56 +37,56 @@ class Source extends MangaSource {
         return Array.from(
           document.querySelectorAll(".row.c-tabs-item__content")
         ).map((element) => {
-          const imageElement = element.querySelector("img");
-          const titleATag = element.querySelector(".post-title h3 a");
+          const imageElement = element.querySelector("img") as HTMLImageElement;
+          const titleATag = element.querySelector(".post-title h3 a") as HTMLAnchorElement;
 
           return {
             id: titleATag.href.split("/")[4],
-            title: titleATag.textContent,
-            cover: imageElement.getAttribute("data-src"),
+            title: titleATag.textContent || "",
+            cover: imageElement.getAttribute("data-src") || "",
           };
         });
       });
     }
-  }
+  },
 
   async getMangaUrl(manga) {
     return {
       url: `https://mangaclash.com/manga/${encodeURIComponent(manga)}/`,
       selector: ".summary_image a",
     };
-  }
+  },
 
   async getMangaFromPage(page, manga) {
     return await page.evaluate(async () => {
-      const aTag = document.querySelector(".summary_image a");
+      const aTag = document.querySelector(".summary_image a") as HTMLAnchorElement;
 
       return {
         id: aTag.href.split("/")[4],
-        title: document.querySelector(".post-title h1").textContent.slice(1),
-        cover: aTag.children[0].getAttribute("data-src"),
+        title: document.querySelector(".post-title h1")!.textContent!.slice(1),
+        cover: aTag.children[0].getAttribute("data-src") || "",
         tags: Array.from(document.querySelectorAll(".genres-content a")).map(
-          (e) => e.textContent
+          (e) => e.textContent || ""
         ),
         status: document
-          .querySelector(".post-status .post-content_item .summary-content")
-          .textContent.replace("\n", "")
+          .querySelector(".post-status .post-content_item .summary-content")!
+          .textContent!.replace("\n", "")
           .replace("\t", ""),
-        description: document.querySelector("p").textContent,
+        description: document.querySelector("p")!.textContent || "",
       };
     });
-  }
+  },
 
   async getChaptersUrl(manga) {
     return {
       url: `https://mangaclash.com/manga/${encodeURIComponent(manga)}/`,
       selector: ".site-content",
     };
-  }
+  },
 
   async getChaptersFromPage(page, manga) {
     return await page.evaluate(() => {
-      return Array.from(document.querySelectorAll(".wp-manga-chapter a")).map(
+      return (Array.from(document.querySelectorAll(".wp-manga-chapter a")) as HTMLAnchorElement[]).map(
         (a) => {
           const id =
             a.href.trim().split("/").reverse()[0] ||
@@ -95,7 +95,7 @@ class Source extends MangaSource {
         }
       );
     });
-  }
+  },
 
   async getChapterUrl(manga, chapter) {
     return {
@@ -104,17 +104,17 @@ class Source extends MangaSource {
       )}/${encodeURIComponent(chapter)}/`,
       selector: ".site-content",
     };
-  }
+  },
 
   async getChapterFromPage(page, manga, chapter) {
     return await page.evaluate(() => {
-      return Array.from(
+      return (Array.from(
         document.querySelectorAll(".reading-content .page-break.no-gaps img")
-      ).map((img) =>
-        img.getAttribute("data-src").replaceAll("\t", "").trim()
+      ) as HTMLImageElement[]).map((img) =>
+        img.getAttribute("data-src")!.replaceAll("\t", "").trim()
       );
     });
   }
-}
+})
 
-module.exports = new Source("mc", 'mangaclash');
+export default source
