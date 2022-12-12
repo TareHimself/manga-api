@@ -23,215 +23,228 @@ const browserArgs = ["--no-sandbox"];
 let showDebug = false;
 
 export interface DomainInfo {
-  browserPageCount: Map<Browser, number>;
+    browserPageCount: Map<Browser, number>;
 }
+
+export class PageQueue {
+
+}
+
 export class PageHandler {
-  browserCounter: number;
-  debug: boolean;
-  availablePages: Page[];
-  pages: Page[];
-  openDomains: Map<string, DomainInfo>;
-  browsers: Browser[];
+    browserCounter: number;
+    debug: boolean;
+    availablePages: Page[];
+    pages: Page[];
+    openDomains: Map<string, DomainInfo>;
+    browsers: Browser[];
 
-  constructor(maxPagesPerBrowser = 6, browserCount = 1, debug = false) {
-    this.browserCounter = browserCount;
-    this.debug = debug
-    this.openDomains = new Map<string, DomainInfo>()
-    this.browsers = []
-    this.pages = []
-  }
-
-  async start() {
-    if (this.browserCounter > 7) {
-      process.setMaxListeners(0);
+    constructor(maxPagesPerBrowser = 6, browserCount = 1, debug = false) {
+        this.browserCounter = browserCount;
+        this.debug = debug
+        this.openDomains = new Map<string, DomainInfo>()
+        this.browsers = []
+        this.pages = []
     }
 
-    for (let i = 0; i < this.browserCounter; i++) {
-      const newBrowser = await puppeteer.launch({
-        headless: true,
-        args: browserArgs,
-        userDataDir: "../cachedData",
-      });
+    async start() {
+        if (this.browserCounter > 7) {
+            process.setMaxListeners(0);
+        }
 
-      this.browsers.push(newBrowser)
+        for (let i = 0; i < this.browserCounter; i++) {
+            const newBrowser = await puppeteer.launch({
+                headless: true,
+                args: browserArgs,
+                userDataDir: "../cachedData",
+            });
 
-      for (let j = 0; j < INITIAL_PAGE_POOL; j++) {
-        pages.push(await this.spawnNewPageForBrowser(newBrowser));
-      }
+            this.browsers.push(newBrowser)
+
+            for (let j = 0; j < INITIAL_PAGE_POOL; j++) {
+                pages.push(await this.spawnNewPageForBrowser(newBrowser));
+            }
+        }
+
     }
 
-  }
+    async spawnNewPageForBrowser(browser: Browser) {
+        const newPage = await browser.newPage();
 
-  async spawnNewPageForBrowser(browser: Browser) {
-    const newPage = await browser.newPage();
+        await newPage.setUserAgent(
+            "Mozilla/5.0 (Windows NT 5.1; rv:5.0) Gecko/20100101 Firefox/5.0"
+        );
 
-    await newPage.setUserAgent(
-      "Mozilla/5.0 (Windows NT 5.1; rv:5.0) Gecko/20100101 Firefox/5.0"
-    );
+        await newPage.setDefaultNavigationTimeout(0);
 
-    await newPage.setDefaultNavigationTimeout(0);
+        return newPage;
+    }
 
-    return newPage;
-  }
+    private async getOrCreatePage(url: string, selector: string) {
+        if ()
+    }
+
+    async getPage(url: string, waitForSelector: string) {
+        return await this.getOrCreatePage(url, waitForSelector);
+    }
 
 
 }
 
 async function Initialize(browserCount = 1, debug = false) {
-  if (browserCount > 7)
+    if (browserCount > 7)
 
-    showDebug = debug;
+        showDebug = debug;
 
 
 
-  if (showDebug)
-    console.log(
-      `${availablePages.length} Pages Available | ${pages.length} Pages Total`
-    );
+    if (showDebug)
+        console.log(
+            `${availablePages.length} Pages Available | ${pages.length} Pages Total`
+        );
 }
 
 function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function waitForPageNaviagation(page, url, selector) {
-  try {
-    //await sleep(10000);
-    if (selector && selector.trim) {
-      page.goto(url, PAGE_LOAD_OPTIONS);
-      await page.waitForSelector(selector);
-    } else {
-      await page.goto(url, PAGE_LOAD_OPTIONS);
+    try {
+        //await sleep(10000);
+        if (selector && selector.trim) {
+            page.goto(url, PAGE_LOAD_OPTIONS);
+            await page.waitForSelector(selector);
+        } else {
+            await page.goto(url, PAGE_LOAD_OPTIONS);
+        }
+    } catch (error) {
+        console.log("error navigating to", url, error);
     }
-  } catch (error) {
-    console.log("error navigating to", url, error);
-  }
 }
 
 function getPage() {
-  return new PageLoader();
+    return new PageLoader();
 }
 
 function closePage(page) {
-  availablePages.push(page);
+    availablePages.push(page);
 
-  if (showDebug)
-    console.log(
-      `${availablePages.length} Pages Available | ${pages.length} Pages Total`
-    );
+    if (showDebug)
+        console.log(
+            `${availablePages.length} Pages Available | ${pages.length} Pages Total`
+        );
 }
 
 class PageLoader extends EventEmitter {
-  url: string;
-  bWascancelled: boolean;
-  bHasLoaded: boolean;
-  constructor() {
-    super();
-    this.url = "";
-    this.bWascancelled = false;
-    this.bHasLoaded = false;
-  }
-
-  /**
-   * Loads a page with the given url
-   * @param {string} url
-   *
-   */
-  async load(url, selector = null) {
-    this.url = url;
-    this.once("cancel", () => {
-      this.bWascancelled = true;
-    });
-
-    let page = availablePages.pop();
-
-    while (page === undefined && !this.bWascancelled) {
-      await sleep(100);
-      page = availablePages.pop();
+    url: string;
+    bWascancelled: boolean;
+    bHasLoaded: boolean;
+    constructor() {
+        super();
+        this.url = "";
+        this.bWascancelled = false;
+        this.bHasLoaded = false;
     }
 
-    if (this.bWascancelled) {
-      if (page) closePage(page);
-
-      this.emit("onCancelled");
-      return;
-    }
-
-    try {
-      let stopCallback = null;
-      const stopPromise = new Promise((x) => (stopCallback = x));
-
-      Promise.race([
-        waitForPageNaviagation(page, this.url, selector),
-        stopPromise,
-      ])
-        .then(() => {
-          if (this.bWascancelled) {
-            if (page) closePage(page);
-
-            this.emit("onCancelled");
-          } else {
-            this.bHasLoaded = true;
-            this.emit("onLoaded", page);
-          }
-        })
-        .catch((error) => {
-          if (this.bWascancelled) {
-            if (page) closePage(page);
-
-            this.emit("onCancelled");
-          }
+    /**
+     * Loads a page with the given url
+     * @param {string} url
+     *
+     */
+    async load(url, selector = null) {
+        this.url = url;
+        this.once("cancel", () => {
+            this.bWascancelled = true;
         });
 
-      this.once("cancel", async () => {
-        await page._client.send("Page.stopLoading");
-        stopCallback();
-      });
-    } catch (error) {
-      if (this.bWascancelled) {
-        if (page) closePage(page);
+        let page = availablePages.pop();
 
-        this.emit("onCancelled");
-      }
-    }
-  }
+        while (page === undefined && !this.bWascancelled) {
+            await sleep(100);
+            page = availablePages.pop();
+        }
 
-  /**
-   * Cancel's the page load
-   *
-   */
-  cancel() {
-    if (!this.bWascancelled && !this.bHasLoaded) {
-      this.emit("cancel");
-      this.emit("onCancelled");
-    }
-  }
+        if (this.bWascancelled) {
+            if (page) closePage(page);
 
-  /**
-   * Called once the page has been loaded
-   * @param {(page: puppeteer.page) => void} callback
-   *
-   */
-  onLoaded(callback) {
-    if (callback) {
-      this.once("onLoaded", callback);
-    }
-  }
+            this.emit("onCancelled");
+            return;
+        }
 
-  /**
-   * Called once the page load has is cancelled
-   * @param {() => void} callback
-   *
-   */
-  onCancelled(callback) {
-    if (callback) {
-      this.once("onCancelled", callback);
+        try {
+            let stopCallback = null;
+            const stopPromise = new Promise((x) => (stopCallback = x));
+
+            Promise.race([
+                waitForPageNaviagation(page, this.url, selector),
+                stopPromise,
+            ])
+                .then(() => {
+                    if (this.bWascancelled) {
+                        if (page) closePage(page);
+
+                        this.emit("onCancelled");
+                    } else {
+                        this.bHasLoaded = true;
+                        this.emit("onLoaded", page);
+                    }
+                })
+                .catch((error) => {
+                    if (this.bWascancelled) {
+                        if (page) closePage(page);
+
+                        this.emit("onCancelled");
+                    }
+                });
+
+            this.once("cancel", async () => {
+                await page._client.send("Page.stopLoading");
+                stopCallback();
+            });
+        } catch (error) {
+            if (this.bWascancelled) {
+                if (page) closePage(page);
+
+                this.emit("onCancelled");
+            }
+        }
     }
-  }
+
+    /**
+     * Cancel's the page load
+     *
+     */
+    cancel() {
+        if (!this.bWascancelled && !this.bHasLoaded) {
+            this.emit("cancel");
+            this.emit("onCancelled");
+        }
+    }
+
+    /**
+     * Called once the page has been loaded
+     * @param {(page: puppeteer.page) => void} callback
+     *
+     */
+    onLoaded(callback) {
+        if (callback) {
+            this.once("onLoaded", callback);
+        }
+    }
+
+    /**
+     * Called once the page load has is cancelled
+     * @param {() => void} callback
+     *
+     */
+    onCancelled(callback) {
+        if (callback) {
+            this.once("onCancelled", callback);
+        }
+    }
 }
 
 module.exports = {
-  Initialize,
-  getPage,
-  closePage,
+    Initialize,
+    getPage,
+    closePage,
 };
