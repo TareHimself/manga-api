@@ -1,7 +1,7 @@
-const cluster = require("cluster");
-const os = require("os");
-const fs = require("fs");
-const path = require("path");
+import cluster from 'cluster';
+import * as os from 'os';
+import * as fs from 'fs';
+import * as path from 'path';
 const initialStatements = [
   `
     CREATE TABLE IF NOT EXISTS cache(
@@ -56,7 +56,7 @@ if (cluster.isMaster) {
   // Take advantage of multiple CPUs
   const cpus = os.cpus().length;
 
-  for (let i = 0; i < cpus; i++) {
+  for (let i = 0; i < Math.max(cpus, 4); i++) {
     cluster.fork(process.env);
   }
 

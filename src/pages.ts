@@ -1,52 +1,88 @@
-const puppeteer = require("puppeteer-extra");
-const StealthPlugin = require("puppeteer-extra-plugin-stealth");
-const AdblockerPlugin = require("puppeteer-extra-plugin-adblocker");
-const { EventEmitter } = require("events");
+import { Browser, Page } from 'puppeteer';
+import puppeteer from 'puppeteer-extra'
+import StealthPlugin from "puppeteer-extra-plugin-stealth"
+import AdblockerPlugin from "puppeteer-extra-plugin-adblocker"
+import EventEmitter from 'events'
 
-const browsers = [];
-const pages = [];
-const availablePages = [];
-const MAX_PER_BROWSER = 6;
-PAGE_LOAD_OPTIONS = {};
 
+// Add stealth plugin and use defaults (all tricks to hide puppeteer usage)
+puppeteer.use(StealthPlugin());
+
+// Add adblocker plugin to block all ads and trackers (saves bandwidth)
+puppeteer.use(AdblockerPlugin({ blockTrackers: true }));
+
+const browsers: Browser[] = [];
+const pages: Page[] = [];
+const availablePages: Page[] = [];
+const INITIAL_PAGE_POOL = 6;
+const PAGE_LOAD_OPTIONS = {};
+const MAX_PER_DOMAIN = 6;
+const DOMAIN_NAME_REGEX = /^http?s:\/\/(.*?\.[a-z]+)(?:\/|$)/
 const browserArgs = ["--no-sandbox"];
 
 let showDebug = false;
 
-async function Initialize(browserCount = 1, debug = false) {
-  if (browserCount > 7) process.setMaxListeners(0);
+export interface DomainInfo {
+  browserPageCount: Map<Browser, number>;
+}
+export class PageHandler {
+  browserCounter: number;
+  debug: boolean;
+  availablePages: Page[];
+  pages: Page[];
+  openDomains: Map<string, DomainInfo>;
+  browsers: Browser[];
 
-  showDebug = debug;
-
-  // Add stealth plugin and use defaults (all tricks to hide puppeteer usage)
-  puppeteer.use(StealthPlugin());
-
-  // Add adblocker plugin to block all ads and trackers (saves bandwidth)
-  puppeteer.use(AdblockerPlugin({ blockTrackers: true }));
-
-  for (i = 0; i < browserCount; i++) {
-    const newBrowser = await puppeteer.launch({
-      headless: true,
-      args: browserArgs,
-      userDataDir: "../cachedData",
-    });
-
-    browsers.push(newBrowser);
-
-    for (j = 0; j < MAX_PER_BROWSER; j++) {
-      const newPage = await newBrowser.newPage();
-
-      await newPage.setUserAgent(
-        "Mozilla/5.0 (Windows NT 5.1; rv:5.0) Gecko/20100101 Firefox/5.0"
-      );
-
-      await newPage.setDefaultNavigationTimeout(0);
-
-      availablePages.push(newPage);
-
-      pages.push(newPage);
-    }
+  constructor(maxPagesPerBrowser = 6, browserCount = 1, debug = false) {
+    this.browserCounter = browserCount;
+    this.debug = debug
+    this.openDomains = new Map<string, DomainInfo>()
+    this.browsers = []
+    this.pages = []
   }
+
+  async start() {
+    if (this.browserCounter > 7) {
+      process.setMaxListeners(0);
+    }
+
+    for (let i = 0; i < this.browserCounter; i++) {
+      const newBrowser = await puppeteer.launch({
+        headless: true,
+        args: browserArgs,
+        userDataDir: "../cachedData",
+      });
+
+      this.browsers.push(newBrowser)
+
+      for (let j = 0; j < INITIAL_PAGE_POOL; j++) {
+        pages.push(await this.spawnNewPageForBrowser(newBrowser));
+      }
+    }
+
+  }
+
+  async spawnNewPageForBrowser(browser: Browser) {
+    const newPage = await browser.newPage();
+
+    await newPage.setUserAgent(
+      "Mozilla/5.0 (Windows NT 5.1; rv:5.0) Gecko/20100101 Firefox/5.0"
+    );
+
+    await newPage.setDefaultNavigationTimeout(0);
+
+    return newPage;
+  }
+
+
+}
+
+async function Initialize(browserCount = 1, debug = false) {
+  if (browserCount > 7)
+
+    showDebug = debug;
+
+
 
   if (showDebug)
     console.log(
@@ -86,6 +122,9 @@ function closePage(page) {
 }
 
 class PageLoader extends EventEmitter {
+  url: string;
+  bWascancelled: boolean;
+  bHasLoaded: boolean;
   constructor() {
     super();
     this.url = "";

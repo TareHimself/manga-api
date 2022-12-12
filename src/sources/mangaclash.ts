@@ -53,7 +53,7 @@ class Source extends MangaSource {
   async getMangaUrl(manga) {
     return {
       url: `https://mangaclash.com/manga/${encodeURIComponent(manga)}/`,
-      selector: ".site-content",
+      selector: ".summary_image a",
     };
   }
 

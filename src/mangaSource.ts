@@ -1,4 +1,3 @@
-"use strict";
 const { getPage, closePage } = require("./pages");
 const { getCachedItem, tCacheItem } = require("./sqlite");
 
@@ -26,8 +25,8 @@ class MangaSource {
     this.name = name;
   }
 
-  async search(req, res) {
-    const search = (req.query.s || "")
+  async search(req) {
+    const search = (req.query.q || "")
       .trim()
       .toLowerCase()
       .replace(/ +(?= )/g, "");
@@ -41,7 +40,7 @@ class MangaSource {
 
     if (cachedData) {
       try {
-        res.send(JSON.parse(cachedData));
+        req.sendBody(JSON.parse(cachedData));
         return;
       } catch (error) { }
     }
@@ -55,13 +54,13 @@ class MangaSource {
         const result = await this.getSearchFromPage(page, search);
 
         if (!loader.bWascancelled) {
-          res.send(result);
+          req.sendBody(result);
           tCacheItem.deferred(this.id, search, `search`, result);
         }
 
       } catch (error) {
-        console.log("Error making search", this.name, search, '\n', error)
-        res.sendStatus(500)
+        console.log("Error making search", url, '\n', error)
+        req.sendStatus(500)
       }
       await closePage(page);
     });
@@ -70,7 +69,7 @@ class MangaSource {
 
     loader.load(url || "", selector || "");
 
-    req.once("close", function (err) {
+    req.once("close", () => {
       loader.cancel();
     });
   }
@@ -81,14 +80,14 @@ class MangaSource {
 
   async getSearchFromPage(page, search) { }
 
-  async getManga(req, res) {
+  async getManga(req) {
     const manga = (req.params.manga || "").trim();
 
     const cachedData = getCachedItem(this.id, manga, "manga", MANGA_CACHE_TIME);
 
     if (cachedData) {
       try {
-        res.send(JSON.parse(cachedData));
+        req.sendBody(JSON.parse(cachedData));
         return;
       } catch (error) { }
     }
@@ -96,7 +95,7 @@ class MangaSource {
     const { url, selector } = await this.getMangaUrl(manga);
 
     if (!url) {
-      res.send("Error generating page url");
+      req.sendBody("Error generating page url");
       return;
     }
 
@@ -107,14 +106,14 @@ class MangaSource {
         const result = await this.getMangaFromPage(page, manga);
 
         if (!loader.bWascancelled) {
-          res.send(result);
+          req.sendBody(result);
           tCacheItem.deferred(this.id, manga, "manga", result);
         }
 
 
       } catch (error) {
-        console.log("Error fetching Manga", this.name, manga, '\n', error)
-        res.sendStatus(500)
+        console.log("Error fetching Manga", url, '\n', error)
+        req.sendStatus(500)
       }
       await closePage(page);
 
@@ -124,7 +123,7 @@ class MangaSource {
 
     loader.load(url, selector || "");
 
-    req.once("close", function (err) {
+    req.once("close", () => {
       loader.cancel();
     });
   }
@@ -137,7 +136,7 @@ class MangaSource {
     return {};
   }
 
-  async getChapters(req, res) {
+  async getChapters(req) {
     const manga = (req.params.manga || "").trim();
     const cachedData = getCachedItem(
       this.id,
@@ -148,14 +147,14 @@ class MangaSource {
 
     if (cachedData) {
       try {
-        res.send(JSON.parse(cachedData));
+        req.sendBody(JSON.parse(cachedData));
         return;
       } catch (error) { }
     }
 
     const { url, selector } = await this.getChaptersUrl(manga);
     if (!url) {
-      res.send("Error generating page url");
+      req.sendBody("Error generating page url");
       return;
     }
 
@@ -166,12 +165,12 @@ class MangaSource {
         const result = await this.getChaptersFromPage(page, manga);
 
         if (!loader.bWascancelled) {
-          res.send(result);
+          req.sendBody(result);
           tCacheItem.deferred(this.id, manga, "chapters", result);
         }
       } catch (error) {
-        console.log("Error fetching chapters", this.name, manga, '\n', error)
-        res.sendStatus(500)
+        console.log("Error fetching chapters", url, '\n', error)
+        req.sendStatus(500)
       }
 
       await closePage(page);
@@ -181,7 +180,7 @@ class MangaSource {
 
     loader.load(url || "", selector || "");
 
-    req.once("close", function (err) {
+    req.once("close", () => {
       loader.cancel();
     });
   }
@@ -194,7 +193,7 @@ class MangaSource {
     return {};
   }
 
-  async getChapter(req, res) {
+  async getChapter(req) {
     const manga = (req.params.manga || "").trim();
     const chapter = (req.params.number || "1").trim();
 
@@ -207,7 +206,7 @@ class MangaSource {
 
     if (cachedData) {
       try {
-        res.send(JSON.parse(cachedData));
+        req.sendBody(JSON.parse(cachedData));
         return;
       } catch (error) { }
     }
@@ -215,7 +214,7 @@ class MangaSource {
     const { url, selector } = await this.getChapterUrl(manga, chapter);
 
     if (!url) {
-      res.send("Error generating page url");
+      req.sendBody("Error generating page url");
       return;
     }
 
@@ -226,13 +225,13 @@ class MangaSource {
         const result = await this.getChapterFromPage(page, manga, chapter);
 
         if (!loader.bWascancelled) {
-          res.send(result);
+          req.sendBody(result);
           tCacheItem.deferred(this.id, manga + chapter, "chapter", result);
         }
 
       } catch (error) {
-        console.log("Error fetching chapter", this.name, manga, chapter, '\n', error)
-        res.sendStatus(500)
+        console.log("Error fetching chapter", url, '\n', error)
+        req.sendStatus(500)
       }
       await closePage(page);
     });
@@ -241,7 +240,7 @@ class MangaSource {
 
     loader.load(url || "", selector || "");
 
-    req.once("close", function (err) {
+    req.once("close", () => {
       loader.cancel();
     });
   }
