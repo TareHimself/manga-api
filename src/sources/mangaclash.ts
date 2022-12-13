@@ -13,7 +13,8 @@ const source = new MangaSource("mc", 'mangaclash', {
     };
   },
 
-  async getSearchFromPage(page, search) {
+  async getSearchFromPage(search, page) {
+    if (!page) return []
     if (!search) {
       return await page.evaluate(() => {
         return Array.from(
@@ -57,7 +58,8 @@ const source = new MangaSource("mc", 'mangaclash', {
     };
   },
 
-  async getMangaFromPage(page, manga) {
+  async getMangaFromPage(manga, page) {
+    if (!page) return null
     return await page.evaluate(async () => {
       const aTag = document.querySelector(".summary_image a") as HTMLAnchorElement;
 
@@ -84,7 +86,8 @@ const source = new MangaSource("mc", 'mangaclash', {
     };
   },
 
-  async getChaptersFromPage(page, manga) {
+  async getChaptersFromPage(manga, page) {
+    if (!page) return []
     return await page.evaluate(() => {
       return (Array.from(document.querySelectorAll(".wp-manga-chapter a")) as HTMLAnchorElement[]).map(
         (a) => {
@@ -106,7 +109,8 @@ const source = new MangaSource("mc", 'mangaclash', {
     };
   },
 
-  async getChapterFromPage(page, manga, chapter) {
+  async getChapterFromPage(manga, chapter, page) {
+    if (!page) return []
     return await page.evaluate(() => {
       return (Array.from(
         document.querySelectorAll(".reading-content .page-break.no-gaps img")

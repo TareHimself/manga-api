@@ -22,7 +22,7 @@ sources.forEach((sourcePath) => {
     app.get(`${PATH_PREFIX}${source.id}/search`, source.search.bind(source));
     app.get(`${PATH_PREFIX}${source.id}/manga/:manga`, source.getManga.bind(source));
     app.get(`${PATH_PREFIX}${source.id}/chapters/:manga/`, source.getChapters.bind(source));
-    app.get(`${PATH_PREFIX}${source.id}/chapters/:manga/:number`,
+    app.get(`${PATH_PREFIX}${source.id}/chapters/:manga/:chapterId`,
       source.getChapter.bind(source)
     );
   } catch (error) {

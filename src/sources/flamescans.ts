@@ -11,7 +11,8 @@ const source = new MangaSource('fs', 'flame scans', {
     };
   },
 
-  async getSearchFromPage(page, search) {
+  async getSearchFromPage(search, page) {
+    if (!page) return []
     if (!search) {
       return await page.evaluate(() => {
         return Array.from(
@@ -46,7 +47,8 @@ const source = new MangaSource('fs', 'flame scans', {
     };
   },
 
-  async getMangaFromPage(page, manga) {
+  async getMangaFromPage(manga, page) {
+    if (!page) return null
     return await page.evaluate(async () => {
       return {
         id: document
@@ -76,7 +78,8 @@ const source = new MangaSource('fs', 'flame scans', {
     };
   },
 
-  async getChaptersFromPage(page, manga) {
+  async getChaptersFromPage(manga, page) {
+    if (!page) return []
     return await page.evaluate(async () => {
       return Array.from(document.querySelectorAll("#chapterlist ul a")).map(
         (a) => {
@@ -96,7 +99,8 @@ const source = new MangaSource('fs', 'flame scans', {
     };
   },
 
-  async getChapterFromPage(page, manga, chapter) {
+  async getChapterFromPage(manga, chapter, page) {
+    if (!page) return []
     return await page.evaluate(async () => {
       return Array.from(document.querySelectorAll("#readerarea img")).map(
         (img) => img.getAttribute('src')!.trim()

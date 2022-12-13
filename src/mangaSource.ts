@@ -23,23 +23,25 @@ export interface MangaInfo extends MangaPreview {
 }
 
 export type MangaSearch = MangaPreview[]
-
-export type MangaChapters = { id: string, title: string }[]
+export type MangaChapterPreview = { id: string, title: string }
+export type MangaChapters = MangaChapterPreview[]
 
 export type MangaChapter = string[]
 
-export type GetUrlReturnType = { url: string; selector: string; }
+export type GetUrlReturnType = { url: string; selector: string; } | null
 
 export interface SourceMethods {
   getSearchUrl: (search: string) => Promise<GetUrlReturnType>;
-  getSearchFromPage: (page: Page, search: string) => Promise<MangaSearch>;
+  getSearchFromPage: (search: string, page?: Page) => Promise<MangaSearch>;
   getMangaUrl: (manga: string) => Promise<GetUrlReturnType>;
-  getMangaFromPage: (page: Page, manga: string) => Promise<MangaInfo>;
+  getMangaFromPage: (manga: string, page?: Page) => Promise<MangaInfo | null>;
   getChaptersUrl: (manga: string) => Promise<GetUrlReturnType>;
-  getChaptersFromPage: (page: Page, manga: string) => Promise<MangaChapters>;
+  getChaptersFromPage: (manga: string, page?: Page) => Promise<MangaChapters>;
   getChapterUrl: (manga: string, chapter: string) => Promise<GetUrlReturnType>;
-  getChapterFromPage: (page: Page, manga: string, chapter: string) => Promise<MangaChapter>;
+  getChapterFromPage: (manga: string, chapter: string, page?: Page) => Promise<MangaChapter>;
 }
+
+const PAGES_HANDLER = new PageHandler(1, 12)
 
 /**
  * Base class for a manga source
@@ -53,8 +55,6 @@ export interface SourceMethods {
  *	getChapterUrl
  *	getChapterFromPage
  */
-
-const PAGES_HANDLER = new PageHandler(12, 1, false)
 export class MangaSource {
   id: string;
   displayName: string;
@@ -90,22 +90,37 @@ export class MangaSource {
     }
 
     // get the search url and selector from the source
-    const { url, selector } = await this.implemented.getSearchUrl(search);
+    const navData = await this.implemented.getSearchUrl(search);
 
-    // fetch a page from the pages system
-    const page = await PAGES_HANDLER.getPage(url, selector);
+    if (navData !== null) {
+      const { url, selector } = navData
 
-    try {
-      const result = await this.implemented.getSearchFromPage(page, search);
-      req.sendBody(result)
-      if (result.length > 0) tCacheItem.deferred(this.id, search, 'search', result)
+      // fetch a page from the pages system
+      const page = await PAGES_HANDLER.getPage(url, selector);
 
-    } catch (error) {
-      console.log("ERROR ", error)
-      req.sendStatus(500)
+      try {
+        const result = await this.implemented.getSearchFromPage(search, page);
+        req.sendBody(result)
+        if (result.length > 0) tCacheItem.deferred(this.id, search, 'search', result)
+
+      } catch (error) {
+        console.log(`Search Error :: ${url}\n`, error)
+        req.sendStatus(500)
+      }
+
+      PAGES_HANDLER.closePage(page)
+    }
+    else {
+      try {
+        const result = await this.implemented.getSearchFromPage(search);
+        req.sendBody(result)
+        if (result.length > 0) tCacheItem.deferred(this.id, search, 'search', result)
+      } catch (error) {
+        console.log(`Search Error :: ${search}\n`, error)
+        req.sendStatus(500)
+      }
     }
 
-    PAGES_HANDLER.closePage(page)
   }
 
   async getManga(req) {
@@ -121,22 +136,36 @@ export class MangaSource {
     }
 
     // get the search url and selector from the source
-    const { url, selector } = await this.implemented.getMangaUrl(manga);
+    const navData = await this.implemented.getMangaUrl(manga);
+    if (navData !== null) {
+      const { url, selector } = navData
+      // fetch a page from the pages system
+      const page = await PAGES_HANDLER.getPage(url, selector);
 
-    // fetch a page from the pages system
-    const page = await PAGES_HANDLER.getPage(url, selector);
+      try {
+        const result = await this.implemented.getMangaFromPage(manga, page);
+        req.sendBody(result)
+        if (result) tCacheItem.deferred(this.id, manga, 'manga', result)
 
-    try {
-      const result = await this.implemented.getMangaFromPage(page, manga);
-      req.sendBody(result)
-      if (Object.keys(result).length > 0) tCacheItem.deferred(this.id, manga, 'manga', result)
+      } catch (error) {
+        console.log(`Get Manga Error :: ${url}\n`, error)
+        req.sendStatus(500)
+      }
 
-    } catch (error) {
-      console.log("ERROR ", error)
-      req.sendStatus(500)
+      PAGES_HANDLER.closePage(page)
+
     }
+    else {
+      try {
+        const result = await this.implemented.getMangaFromPage(manga);
+        req.sendBody(result)
+        if (result) tCacheItem.deferred(this.id, manga, 'manga', result)
 
-    PAGES_HANDLER.closePage(page)
+      } catch (error) {
+        console.log(`Get Manga Error :: ${manga}\n`, error)
+        req.sendStatus(500)
+      }
+    }
   }
 
   async getChapters(req) {
@@ -157,26 +186,39 @@ export class MangaSource {
     }
 
     // get the search url and selector from the source
-    const { url, selector } = await this.implemented.getChaptersUrl(manga);
+    const navData = await this.implemented.getChaptersUrl(manga);
+    if (navData !== null) {
+      const { url, selector } = navData
+      // fetch a page from the pages system
+      const page = await PAGES_HANDLER.getPage(url, selector);
 
-    // fetch a page from the pages system
-    const page = await PAGES_HANDLER.getPage(url, selector);
+      try {
+        const result = await this.implemented.getChaptersFromPage(manga, page);
+        req.sendBody(result)
+        if (result.length > 0) tCacheItem.deferred(this.id, manga, 'chapter', result)
+      } catch (error) {
+        console.log(`Get Chapters Error :: ${url}\n`, error)
+        req.sendStatus(500)
+      }
 
-    try {
-      const result = await this.implemented.getChaptersFromPage(page, manga);
-      req.sendBody(result)
-      if (result.length > 0) tCacheItem.deferred(this.id, manga, 'chapter', result)
-    } catch (error) {
-      console.log("ERROR ", error)
-      req.sendStatus(500)
+      PAGES_HANDLER.closePage(page)
+
     }
-
-    PAGES_HANDLER.closePage(page)
+    else {
+      try {
+        const result = await this.implemented.getChaptersFromPage(manga);
+        req.sendBody(result)
+        if (result.length > 0) tCacheItem.deferred(this.id, manga, 'chapter', result)
+      } catch (error) {
+        console.log(`Get Chapters Error :: ${manga}\n`, error)
+        req.sendStatus(500)
+      }
+    }
   }
 
   async getChapter(req) {
     const manga = (req.params.manga || "").trim();
-    const chapter = (req.params.number || "1").trim();
+    const chapter = (req.params.chapterId || "1").trim();
 
     const cachedData = getCachedItem(
       this.id,
@@ -193,21 +235,35 @@ export class MangaSource {
     }
 
     // get the search url and selector from the source
-    const { url, selector } = await this.implemented.getChapterUrl(manga, chapter);
+    const navData = await this.implemented.getChapterUrl(manga, chapter);
+    if (navData !== null) {
+      const { url, selector } = navData
+      // fetch a page from the pages system
+      const page = await PAGES_HANDLER.getPage(url, selector);
 
-    // fetch a page from the pages system
-    const page = await PAGES_HANDLER.getPage(url, selector);
+      try {
+        const result = await this.implemented.getChapterFromPage(manga, chapter, page);
+        req.sendBody(result)
+        if (result.length > 0) tCacheItem.deferred(this.id, manga + chapter, 'chapter', result)
 
-    try {
-      const result = await this.implemented.getChapterFromPage(page, manga, chapter);
-      req.sendBody(result)
-      if (result.length > 0) tCacheItem.deferred(this.id, manga + chapter, 'chapter', result)
+      } catch (error) {
+        console.log(`Get Chapter Error :: ${url}\n`, error)
+        req.sendStatus(500)
+      }
 
-    } catch (error) {
-      console.log("ERROR ", error)
-      req.sendStatus(500)
+      PAGES_HANDLER.closePage(page)
+
     }
+    else {
+      try {
+        const result = await this.implemented.getChapterFromPage(manga, chapter);
+        req.sendBody(result)
+        if (result.length > 0) tCacheItem.deferred(this.id, manga + chapter, 'chapter', result)
 
-    PAGES_HANDLER.closePage(page)
+      } catch (error) {
+        console.log(`Get Chapter Error :: ${manga + chapter}\n`, error)
+        req.sendStatus(500)
+      }
+    }
   }
 }

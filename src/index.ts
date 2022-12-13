@@ -9,8 +9,13 @@ if (cluster.isPrimary) {
   // Take advantage of multiple CPUs
   const cpus = os.cpus().length;
 
-  for (let i = 0; i < Math.max(cpus, 4); i++) {
+  if (process.argv.includes('--no-cluster')) {
     cluster.fork(process.env);
+  }
+  else {
+    for (let i = 0; i < Math.max(cpus, 4); i++) {
+      cluster.fork(process.env);
+    }
   }
 
   cluster.on("exit", (worker, code) => {

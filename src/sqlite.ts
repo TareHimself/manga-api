@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import cluster from 'cluster'
 const DATABASE_DIR = path.join(process.cwd(), 'db')
 const db = Database(path.join(DATABASE_DIR, 'cache.db'))
-
+const SHOULD_NOT_CACHE = process.argv.includes('--no-cache')
 if (cluster.isPrimary) {
 
   const initialStatements = [
@@ -106,6 +106,8 @@ export function getCachedItem(src: string, id: string, type: cacheType, ttl: num
  * @param {number} data the actual item to store
  */
 const tCacheItem = db.transaction((src: string, id: string, type: cacheType, data: object) => {
+  if (SHOULD_NOT_CACHE) return;
+
   db.prepare(
     `REPLACE INTO cache (src,id,type,data,timestamp) VALUES(@src,@id,@type,@data,@timestamp)`
   ).run({

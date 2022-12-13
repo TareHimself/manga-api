@@ -13,7 +13,8 @@ const source = new MangaSource("mh18", 'manhwa18', {
     };
   },
 
-  async getSearchFromPage(page, search) {
+  async getSearchFromPage(search, page) {
+    if (!page) return []
     return await page.evaluate(() => {
       return Array.from(document.querySelectorAll('.thumb-item-flow.col-6.col-md-3')).map(div => {
         const anchor = (div.querySelector('.thumb_attr.series-title a') as HTMLAnchorElement)
@@ -33,7 +34,8 @@ const source = new MangaSource("mh18", 'manhwa18', {
     };
   },
 
-  async getMangaFromPage(page, manga) {
+  async getMangaFromPage(manga, page) {
+    if (!page) return null
     return await page.evaluate(async () => {
       const root = document.querySelector('.col-md-8.mt-2')!
       const subElement = root.querySelector('.col-md-8')!;
@@ -55,7 +57,8 @@ const source = new MangaSource("mh18", 'manhwa18', {
     };
   },
 
-  async getChaptersFromPage(page, manga) {
+  async getChaptersFromPage(manga, page) {
+    if (!page) return []
     return await page.evaluate(() => {
       return (Array.from(document.querySelectorAll('.list-chapters.at-series.list-unstyled a')) as HTMLAnchorElement[]).map(a => {
         return {
@@ -73,7 +76,8 @@ const source = new MangaSource("mh18", 'manhwa18', {
     };
   },
 
-  async getChapterFromPage(page, manga, chapter) {
+  async getChapterFromPage(manga, chapter, page) {
+    if (!page) return []
     return await page.evaluate(() => {
       return (Array.from(document.querySelectorAll('.chapter-content img')) as HTMLImageElement[]).map(img => img.getAttribute('data-original')!.trim())
     });

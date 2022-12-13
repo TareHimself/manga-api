@@ -36,6 +36,11 @@ export function getDomainFromURL(url: string) {
     return url.match(DOMAIN_NAME_REGEX)![1]
 }
 
+export interface PendingPageRequest {
+    domainName: string;
+    callback: (page: Page) => void;
+}
+
 export class PageHandler {
     numBrowsers: number;
     debug: boolean;
@@ -45,8 +50,12 @@ export class PageHandler {
     openDomains: { [key: number]: DomainInfo };
     browsers: { [key: number]: Browser };
     maxPagesPerBrowser: number;
+    headless: boolean;
+    pendingPageRequests: PendingPageRequest[];
+    initialized: boolean;
+    initializedCallbacks: (() => void)[];
 
-    constructor(maxPagesPerBrowser = 6, browserCount = 1, debug = false) {
+    constructor(browserCount = 1, maxPagesPerBrowser = 6, debug = false, headless = true) {
         this.maxPagesPerBrowser = maxPagesPerBrowser
         this.numBrowsers = browserCount;
         this.debug = debug
@@ -54,6 +63,10 @@ export class PageHandler {
         this.browsers = {}
         this.pages = {}
         this.pagesCount = {}
+        this.headless = headless
+        this.pendingPageRequests = []
+        this.initialized = false
+        this.initializedCallbacks = []
         this.start()
     }
 
@@ -64,7 +77,7 @@ export class PageHandler {
 
         for (let i = 0; i < this.numBrowsers; i++) {
             const newBrowser = await puppeteer.launch({
-                headless: true,
+                headless: this.headless,
                 args: browserArgs,
                 userDataDir: "../cachedData",
                 executablePath: executablePath(),
@@ -75,27 +88,64 @@ export class PageHandler {
             this.pages[browserId] = []
         }
 
-        console.log('Browsers Created')
+        this.initialized = true
+        this.initializedCallbacks.forEach(c => c())
+
+    }
+
+    waitForInitialize() {
+        return new Promise<void>((resolve) => {
+            this.initializedCallbacks.push(resolve)
+        })
+    }
+
+    ensureDomainCount(domain: string, browserId: string) {
+        if (!this.openDomains[domain][browserId]) this.openDomains[domain][browserId] = 0
     }
 
     async spawnNewPageForBrowser(browser: Browser) {
         const b_id = getBrowserId(browser)
+
+        this.pagesCount[b_id] += 1
+
         const newPage = await browser.newPage();
 
         await newPage.setUserAgent(
-            "Mozilla/5.0 (Windows NT 5.1; rv:5.0) Gecko/20100101 Firefox/5.0"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
         );
+
+        await newPage.setExtraHTTPHeaders({
+            'Accept-Language': 'en-GB,en;q=0.9',
+            'sec-ch-ua-platform': "Windows",
+            'sec-ch-ua': "\"Not?A_Brand\";v=\"8\", \"Chromium\";v=\"108\", \"Google Chrome\";v=\"108\""
+        });
 
         newPage.setDefaultNavigationTimeout(0);
 
-        this.pagesCount[b_id] += 1
+
         return newPage;
     }
 
-    private async waitForPageWithDomain(url: string) {
+    waitForAvailablePage(domainName) {
+        const prom = new Promise<Page>((resolve) => {
+            this.pendingPageRequests.push({
+                domainName: domainName,
+                callback: (p) => {
+                    resolve(p)
+                }
+            })
+        })
 
+
+        return prom;
     }
-    private async getUsablePage(domainName: string): Promise<Page> {
+
+    incrementPages(domain: string, browserId: string) {
+        if (!this.openDomains[domain][browserId]) this.openDomains[domain][browserId] = 0
+        this.openDomains[domain][browserId] += 1
+    }
+
+    private async getUsablePage(domainName: string): Promise<Page | null> {
 
         if (!this.openDomains[domainName]) {
             this.openDomains[domainName] = {}
@@ -112,8 +162,10 @@ export class PageHandler {
 
             if (pageCount < MAX_PER_DOMAIN) {
                 if (this.pages[browser_id].length > 0) {
+                    this.incrementPages(domainName, browser_id)
                     return this.pages[browser_id].pop()!
                 } else if (this.pagesCount[browser_id] < this.maxPagesPerBrowser) {
+                    this.incrementPages(domainName, browser_id)
                     return await this.spawnNewPageForBrowser(currentItem)
                 }
             }
@@ -122,19 +174,26 @@ export class PageHandler {
         const otherBrowsers = Object.keys(this.browsers).filter(a => !browserIdsInInfo.includes(a))
 
         if (otherBrowsers.length == 0) {
-            throw new Error("IT ACTUALLY HAPPENED")
+            return null
         }
 
         const browserIdWithPage = otherBrowsers.find(a => this.pages[a].length > 0 || this.pagesCount[a] < this.maxPagesPerBrowser)
 
         if (!browserIdWithPage) {
-            throw new Error("IT ACTUALLY HAPPENED PT.2")
+            return null
         }
 
+
+
         if (this.pages[browserIdWithPage].length > 0) {
+            this.incrementPages(domainName, browserIdWithPage)
             return this.pages[browserIdWithPage].pop()
         }
 
+        if (this.pagesCount[browserIdWithPage] === this.maxPagesPerBrowser || this.openDomains[domainName][browserIdWithPage] === MAX_PER_DOMAIN) {
+            return null
+        }
+        this.incrementPages(domainName, browserIdWithPage)
         return await this.spawnNewPageForBrowser(this.browsers[browserIdWithPage])
     }
 
@@ -142,13 +201,14 @@ export class PageHandler {
 
         const domainName = getDomainFromURL(url)
 
-        const page = await this.getUsablePage(domainName)
-        const browserId = getBrowserId(page.browser())
+        let page = await this.getUsablePage(domainName)
 
-        if (!this.openDomains[domainName][browserId]) this.openDomains[domainName][browserId] = 0
+        if (!page) {
+            page = await this.waitForAvailablePage(domainName)
+        }
 
-        this.openDomains[domainName][browserId] += 1
-        if (selector.trim().length > 0) {
+
+        if (selector.trim().length === 0) {
             await page.goto(url)
         }
         else {
@@ -160,13 +220,31 @@ export class PageHandler {
 
 
 
-    async getPage(url: string, waitForSelector: string): Promise<Page> {
+    async getPage(url: string, waitForSelector: string = ""): Promise<Page> {
+        if (!this.initialized) await this.waitForInitialize()
         return await this.getOrCreatePage(url, waitForSelector);
     }
 
     closePage(page: Page) {
         const domainName = getDomainFromURL(page.url())
         const browserId = getBrowserId(page.browser())
+        for (let i = 0; i < this.pendingPageRequests.length; i++) {
+            const current = this.pendingPageRequests[i]
+
+            if (!this.openDomains[current.domainName] || !this.openDomains[current.domainName][browserId]) this.openDomains[current.domainName][browserId] = 0
+
+            if (current.domainName === domainName) {
+                current.callback(page)
+                this.pendingPageRequests.splice(i, 1)
+                return;
+            }
+            else if (this.openDomains[current.domainName][browserId] < MAX_PER_DOMAIN) {
+                this.incrementPages(domainName, browserId);
+                current.callback(page)
+                this.pendingPageRequests.splice(i, 1)
+                return;
+            }
+        }
         this.pages[browserId].push(page)
         this.openDomains[domainName][browserId] -= 1;
     }

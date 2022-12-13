@@ -9,7 +9,8 @@ const source = new MangaSource("rm", 'readm', {
     };
   },
 
-  async getSearchFromPage(page, search) {
+  async getSearchFromPage(search, page) {
+    if (!page) return []
     if (!search) {
       return await page.evaluate(async () => {
         return Array.from(document.querySelectorAll('.clearfix.latest-updates .segment-poster-sm')).map((item) => {
@@ -50,7 +51,8 @@ const source = new MangaSource("rm", 'readm', {
     };
   },
 
-  async getMangaFromPage(page, manga) {
+  async getMangaFromPage(manga, page) {
+    if (!page) return null
     return await page.evaluate(async () => {
       const wrapper = document.querySelector('#series-profile-wrapper')!
       const titleElement = document.querySelector(".page-title")!
@@ -76,7 +78,8 @@ const source = new MangaSource("rm", 'readm', {
     };
   },
 
-  async getChaptersFromPage(page, manga) {
+  async getChaptersFromPage(manga, page) {
+    if (!page) return []
     return await page.evaluate(() => {
       return (Array.from(document.querySelectorAll('.item.season_start a')) as HTMLAnchorElement[]).map(a => {
         return {
@@ -96,7 +99,8 @@ const source = new MangaSource("rm", 'readm', {
     };
   },
 
-  async getChapterFromPage(page, manga, chapter) {
+  async getChapterFromPage(manga, chapter, page) {
+    if (!page) return []
     return await page.evaluate(() => {
       return (Array.from(document.querySelectorAll('.ch-images.ch-image-container img')) as HTMLImageElement[]).map(img => img.src.trim());
     });
