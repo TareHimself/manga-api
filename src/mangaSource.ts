@@ -41,7 +41,7 @@ export interface SourceMethods {
   getChapterFromPage: (manga: string, chapter: string, page?: Page) => Promise<MangaChapter>;
 }
 
-const PAGES_HANDLER = new PageHandler(1, 12)
+const PAGES_HANDLER = new PageHandler(1, 12, false, true)
 
 /**
  * Base class for a manga source
@@ -84,7 +84,7 @@ export class MangaSource {
     // return the cached data if it exists
     if (cachedData) {
       try {
-        req.sendBody(JSON.parse(cachedData));
+        req.send(JSON.parse(cachedData));
         return;
       } catch (error) { }
     }
@@ -100,7 +100,7 @@ export class MangaSource {
 
       try {
         const result = await this.implemented.getSearchFromPage(search, page);
-        req.sendBody(result)
+        req.send(result)
         if (result.length > 0) tCacheItem.deferred(this.id, search, 'search', result)
 
       } catch (error) {
@@ -113,7 +113,7 @@ export class MangaSource {
     else {
       try {
         const result = await this.implemented.getSearchFromPage(search);
-        req.sendBody(result)
+        req.send(result)
         if (result.length > 0) tCacheItem.deferred(this.id, search, 'search', result)
       } catch (error) {
         console.log(`Search Error :: ${search}\n`, error)

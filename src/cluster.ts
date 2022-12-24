@@ -1,12 +1,9 @@
-const { Initialize } = require("./pages");
 import * as fs from 'fs'
 import path from 'path'
-import process from 'process';
 import { Client } from 'express-websocket-proxy';
 import { MangaSource } from './mangaSource';
 
-const app = new Client("wss://proxy.oyintare.dev");
-const PATH_PREFIX = 'manga/';
+const app = new Client("manga", "wss://proxy.oyintare.dev");
 
 const sourcesInstances: MangaSource[] = [];
 const sources = fs
@@ -19,10 +16,10 @@ sources.forEach((sourcePath) => {
     const source = require(sourcePath).default as MangaSource;
 
     sourcesInstances.push(source);
-    app.get(`${PATH_PREFIX}${source.id}/search`, source.search.bind(source));
-    app.get(`${PATH_PREFIX}${source.id}/manga/:manga`, source.getManga.bind(source));
-    app.get(`${PATH_PREFIX}${source.id}/chapters/:manga/`, source.getChapters.bind(source));
-    app.get(`${PATH_PREFIX}${source.id}/chapters/:manga/:chapterId`,
+    app.get(`/${source.id}/search`, source.search.bind(source));
+    app.get(`/${source.id}/manga/:manga`, source.getManga.bind(source));
+    app.get(`/${source.id}/chapters/:manga/`, source.getChapters.bind(source));
+    app.get(`/${source.id}/chapters/:manga/:chapterId`,
       source.getChapter.bind(source)
     );
   } catch (error) {
@@ -30,8 +27,8 @@ sources.forEach((sourcePath) => {
   }
 });
 
-app.get(PATH_PREFIX, async (req) => {
-  req.sendBody(sourcesInstances.map(source => ({ id: source.id, name: source.displayName })));
+app.get("/", async (req) => {
+  req.send(sourcesInstances.map(source => ({ id: source.id, name: source.displayName })));
 });
 
 app.connect()

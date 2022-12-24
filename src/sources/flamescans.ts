@@ -5,8 +5,8 @@ const source = new MangaSource('fs', 'flame scans', {
   async getSearchUrl(search) {
     return {
       url: search
-        ? `https://flamescans.org/ahhh/?s=${encodeURIComponent(search)}`
-        : `https://flamescans.org/ahhh/`,
+        ? `https://flamescans.org/?s=${encodeURIComponent(search)}`
+        : `https://flamescans.org/`,
       selector: "#content",
     };
   },
@@ -42,7 +42,7 @@ const source = new MangaSource('fs', 'flame scans', {
 
   async getMangaUrl(manga) {
     return {
-      url: `https://flamescans.org/ahhh/series/${encodeURIComponent(manga)}/`,
+      url: `https://flamescans.org/series/${encodeURIComponent(manga)}/`,
       selector: "#content",
     };
   },
@@ -73,7 +73,7 @@ const source = new MangaSource('fs', 'flame scans', {
   async getChaptersUrl(manga) {
 
     return {
-      url: `https://flamescans.org/ahhh/series/${encodeURIComponent(manga.trim())}/`,
+      url: `https://flamescans.org/series/${encodeURIComponent(manga.trim())}/`,
       selector: "#chapterlist",
     };
   },
@@ -92,7 +92,7 @@ const source = new MangaSource('fs', 'flame scans', {
 
   async getChapterUrl(manga, chapter) {
     return {
-      url: `https://flamescans.org/ahhh/${encodeURIComponent(
+      url: `https://flamescans.org/${encodeURIComponent(
         manga
       )}-${encodeURIComponent(chapter)}/`,
       selector: "#readerarea",

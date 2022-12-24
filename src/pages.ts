@@ -2,7 +2,6 @@ import { Browser, Page, executablePath } from 'puppeteer';
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from "puppeteer-extra-plugin-stealth"
 import AdblockerPlugin from "puppeteer-extra-plugin-adblocker"
-import EventEmitter from 'events'
 
 
 // Add stealth plugin and use defaults (all tricks to hide puppeteer usage)
@@ -76,6 +75,7 @@ export class PageHandler {
         }
 
         for (let i = 0; i < this.numBrowsers; i++) {
+            console.log(this.headless)
             const newBrowser = await puppeteer.launch({
                 headless: this.headless,
                 args: browserArgs,
