@@ -1,4 +1,3 @@
-const { getPage, closePage } = require("./pages");
 import { PageHandler } from './pages'
 import { getCachedItem, tCacheItem } from './sqlite';
 import { WebRequest } from 'express-websocket-proxy'
@@ -130,7 +129,7 @@ export class MangaSource {
 
     if (cachedData) {
       try {
-        req.sendBody(JSON.parse(cachedData));
+        req.send(JSON.parse(cachedData));
         return;
       } catch (error) { }
     }
@@ -144,7 +143,7 @@ export class MangaSource {
 
       try {
         const result = await this.implemented.getMangaFromPage(manga, page);
-        req.sendBody(result)
+        req.send(result)
         if (result) tCacheItem.deferred(this.id, manga, 'manga', result)
 
       } catch (error) {
@@ -158,7 +157,7 @@ export class MangaSource {
     else {
       try {
         const result = await this.implemented.getMangaFromPage(manga);
-        req.sendBody(result)
+        req.send(result)
         if (result) tCacheItem.deferred(this.id, manga, 'manga', result)
 
       } catch (error) {
@@ -180,7 +179,7 @@ export class MangaSource {
     if (cachedData) {
       try {
         console.log("From Cache")
-        req.sendBody(JSON.parse(cachedData));
+        req.send(JSON.parse(cachedData));
         return;
       } catch (error) { }
     }
@@ -194,7 +193,7 @@ export class MangaSource {
 
       try {
         const result = await this.implemented.getChaptersFromPage(manga, page);
-        req.sendBody(result)
+        req.send(result)
         if (result.length > 0) tCacheItem.deferred(this.id, manga, 'chapter', result)
       } catch (error) {
         console.log(`Get Chapters Error :: ${url}\n`, error)
@@ -207,7 +206,7 @@ export class MangaSource {
     else {
       try {
         const result = await this.implemented.getChaptersFromPage(manga);
-        req.sendBody(result)
+        req.send(result)
         if (result.length > 0) tCacheItem.deferred(this.id, manga, 'chapter', result)
       } catch (error) {
         console.log(`Get Chapters Error :: ${manga}\n`, error)
@@ -229,7 +228,7 @@ export class MangaSource {
 
     if (cachedData) {
       try {
-        req.sendBody(JSON.parse(cachedData));
+        req.send(JSON.parse(cachedData));
         return;
       } catch (error) { }
     }
@@ -243,7 +242,7 @@ export class MangaSource {
 
       try {
         const result = await this.implemented.getChapterFromPage(manga, chapter, page);
-        req.sendBody(result)
+        req.send(result)
         if (result.length > 0) tCacheItem.deferred(this.id, manga + chapter, 'chapter', result)
 
       } catch (error) {
@@ -257,7 +256,7 @@ export class MangaSource {
     else {
       try {
         const result = await this.implemented.getChapterFromPage(manga, chapter);
-        req.sendBody(result)
+        req.send(result)
         if (result.length > 0) tCacheItem.deferred(this.id, manga + chapter, 'chapter', result)
 
       } catch (error) {
