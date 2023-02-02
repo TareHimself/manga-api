@@ -18,6 +18,7 @@ const PAGE_LOAD_OPTIONS = {};
 const MAX_PER_DOMAIN = 6;
 const DOMAIN_NAME_REGEX = /^http?s:\/\/(.*?\.[a-z]+)(?:\/|$)/
 const browserArgs = ["--no-sandbox"];
+const NO_NAVIGATION_PAGE = "DO NOT NAVIGATE AND RETURN JUST PAGE"
 
 let showDebug = false;
 
@@ -32,6 +33,7 @@ export function getBrowserId(b: Browser) {
 }
 
 export function getDomainFromURL(url: string) {
+    if (url.length === 0) return NO_NAVIGATION_PAGE;
     return url.match(DOMAIN_NAME_REGEX)![1]
 }
 
@@ -67,6 +69,11 @@ export class PageHandler {
         this.initialized = false
         this.initializedCallbacks = []
         this.start()
+    }
+
+    getMaxPagesForDomain(domanName: string) {
+        if (domanName === NO_NAVIGATION_PAGE) return this.maxPagesPerBrowser
+        return MAX_PER_DOMAIN
     }
 
     async start() {
@@ -160,7 +167,7 @@ export class PageHandler {
             const [browser_id, currentItem] = browsersInUseByDomain[i]
             const pageCount = info[browser_id]
 
-            if (pageCount < MAX_PER_DOMAIN) {
+            if (pageCount < this.getMaxPagesForDomain(domainName)) {
                 if (this.pages[browser_id].length > 0) {
                     this.incrementPages(domainName, browser_id)
                     return this.pages[browser_id].pop()!
@@ -190,7 +197,7 @@ export class PageHandler {
             return this.pages[browserIdWithPage].pop()
         }
 
-        if (this.pagesCount[browserIdWithPage] === this.maxPagesPerBrowser || this.openDomains[domainName][browserIdWithPage] === MAX_PER_DOMAIN) {
+        if (this.pagesCount[browserIdWithPage] === this.maxPagesPerBrowser || this.openDomains[domainName][browserIdWithPage] === this.getMaxPagesForDomain(domainName)) {
             return null
         }
         this.incrementPages(domainName, browserIdWithPage)
@@ -207,6 +214,9 @@ export class PageHandler {
             page = await this.waitForAvailablePage(domainName)
         }
 
+        if (url === NO_NAVIGATION_PAGE) {
+            return page
+        }
 
         if (selector.trim().length === 0) {
             await page.goto(url)
@@ -220,7 +230,7 @@ export class PageHandler {
 
 
 
-    async getPage(url: string, waitForSelector: string = ""): Promise<Page> {
+    async getPage(url: string = NO_NAVIGATION_PAGE, waitForSelector: string = ""): Promise<Page> {
         if (!this.initialized) await this.waitForInitialize()
         return await this.getOrCreatePage(url, waitForSelector);
     }
@@ -238,7 +248,7 @@ export class PageHandler {
                 this.pendingPageRequests.splice(i, 1)
                 return;
             }
-            else if (this.openDomains[current.domainName][browserId] < MAX_PER_DOMAIN) {
+            else if (this.openDomains[current.domainName][browserId] < this.getMaxPagesForDomain(current.domainName)) {
                 this.incrementPages(domainName, browserId);
                 current.callback(page)
                 this.pendingPageRequests.splice(i, 1)
