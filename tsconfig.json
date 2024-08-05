@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "target": "ES2021",
+        "allowJs": true,
+        "module": "commonjs",
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "noImplicitAny": true,
+        "outDir": "dist",
+        "moduleResolution": "node",
+        "resolveJsonModule": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "pretty": true,
+        "jsx": "react-jsx",
+        "paths": {
+            "*": ["./node_modules/*"]
+        },
+        "noUncheckedIndexedAccess": true,
+        "strict": true,
+        "exactOptionalPropertyTypes": true
+    },
+    "include": ["src/**/*", "src/sources/asurascans.ts", "src/sources/flamescans.ts", "src/sources/hitomi_la.ts", "src/sources/imhentai.ts", "src/sources/mangadex.ts", "src/sources/mangafire.ts", "src/sources/mangakatana.ts", "src/sources/manganato.ts", "src/sources/nhentai.ts", "src/sources/rawkuma.ts", "src/sources/readm.ts", "src/sources/syosetu_se.ts"]
+}
