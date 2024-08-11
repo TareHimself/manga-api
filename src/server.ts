@@ -48,54 +48,6 @@ app.get(`/pages/:pageId`,async (req,res)=>{
     res.sendStatus(404)
 })
 
-// app.get(`/page/:pageId`,async (req,res)=>{
-//     const fetch = (await importFetch()).default
-
-//     try {
-//         const cacheId = req.params.pageId
-//         const pagePath = await pageCache.get(cacheId,Infinity,false)
-
-//         if(pagePath){
-//             res.setHeader('Content-Type','image/png')
-//             res.sendFile(pagePath)
-//             return
-//         }
-//         else{
-//             const proxyPath = await proxyCache.get(cacheId,Infinity,false)
-//             if(proxyPath){
-//                 const proxyData: IProxyData = JSON.parse(await fsPromises.readFile(proxyPath,'ascii'))
-
-//                 const fetchResponse = await fetch(proxyData['url'],{
-//                     headers: {
-//                         "User-Agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-//                     ...proxyData['headers']}
-//                 })
-
-//                 if(fetchResponse.body){
-
-//                     // await fetch(proxyData['url'],{
-//                     //     headers: {
-//                     //         "User-Agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-//                     //     ...proxyData['headers']}
-//                     // }).then(a => {
-//                     //     res.setHeader('Content-Type','image/jpeg')
-//                     //     res.setHeader("Content-Length",a.headers.get("content-length")!)
-//                     //     a.body?.pipe(res)
-//                     // })
-
-//                     res.setHeader('Content-Type','image/jpeg')
-//                     res.setHeader("Content-Length",fetchResponse.headers.get("content-length")!)
-//                     fetchResponse.body.pipe(res)
-//                     await pageCache.cache(cacheId,fetchResponse.body,false)
-//                     return
-//                 }
-//             }
-//         }
-//     } catch (error) {
-//         console.error(error)
-//     }
-//     res.sendStatus(404)
-// })
 app.get(`/api/v${apiVersion}`, async (_req, res) => {
 	const data = Array.from(sourceManager.sources.values()).sort((a,b)=>{
 		if(a.name.toLowerCase() === b.name.toLowerCase()){
