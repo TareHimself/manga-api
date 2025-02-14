@@ -7,8 +7,9 @@ import {
 	IMangaPreview,
 	EMangaStatus,
 	IApiImage,
+	IMangaChapter,
 } from '../types';
-import { makeApiImage } from '../utils';
+import { extractAndFormatDate, makeApiImage } from '../utils';
 import { withBrowserPage } from '../browser';
 
 class SyosetuSeSource extends SourceBase {
@@ -140,7 +141,7 @@ class SyosetuSeSource extends SourceBase {
 					status: EMangaStatus.COMPLETE,
 					description: '',
 					tags: Array.from(document.querySelectorAll('#tags a')).map(
-						(a) => a.textContent ?? ''
+						(a) => (a.textContent ?? '').split(' ').filter(c => c !== '♀' && c !== '♂').join(' ')
 					),
 					extras: [],
 					name:
@@ -167,23 +168,42 @@ class SyosetuSeSource extends SourceBase {
 	}
 
 	override async handleChapters(
-		_mangaId: string
+		mangaId: string
 	): Promise<IChaptersResponse> {
-		return [
-			{
-				id: 'chapter',
-				name: 'Chapter',
-				released: null,
-			},
-		];
+		const targetUrl = `${this.baseUrl}${mangaId}`;
+
+		return await withBrowserPage(async (browserPage) => {
+			await browserPage.goto(targetUrl, {
+				waitUntil: 'networkidle2',
+			});
+
+			await browserPage.waitForSelector('.content');
+			
+			return await browserPage.evaluate((targetUrl) => {
+				const releaseDate = document.querySelector('.gallery-info > .date')?.textContent ?? null;
+				const results = Array.from(document.querySelectorAll('.simplePagerNav > li > a')).map<IMangaChapter>((c,idx) => ({
+					id: `${idx + 1}`,
+					name: `Chapter ${idx + 1}`,
+					released: releaseDate
+				}))
+
+				if(results.length > 0) return results.toReversed();
+				
+				return [{
+					id: `1`,
+					name: `Chapter 1`,
+					released: releaseDate
+				}]
+			},targetUrl).then( c => c.map(d => ({...d,released: extractAndFormatDate(d.released)})));
+		});
 	}
 
 	override async handleChapter(
 		mangaId: string,
-		_chapterId: string
+		chapterId: string
 	): Promise<IChapterResponse> {
 		const targetUrl = `${this.baseUrl}${mangaId}`;
-
+		console.log('targerURL',targetUrl)
 		return await withBrowserPage(async (browserPage) => {
 			await browserPage.goto(targetUrl, {
 				waitUntil: 'networkidle2',
@@ -193,13 +213,13 @@ class SyosetuSeSource extends SourceBase {
 
 			const pages: IApiImage[] = [];
 
-			const toVisit = await browserPage.evaluate(() =>
+			const toVisit = await browserPage.evaluate((chapterId) =>
 				Array.from(
 					document.querySelectorAll(
-						'.thumbnail-list .simplePagerPage1 a'
+						`.thumbnail-list .simplePagerPage${chapterId} a`
 					)
 				).map((a) => (a as HTMLAnchorElement).href)
-			);
+			,chapterId);
 
 			for (const dest of toVisit) {
 				await browserPage.goto(dest);

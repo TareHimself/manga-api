@@ -115,11 +115,17 @@ class AsuraScansSource extends SourceBase {
 		} else if (mangaStatus === 'Complete') {
 			status = EMangaStatus.COMPLETE;
 		}
+
+		let src = `${dom.querySelector('.thumb img')?.getAttribute('src') ?? ''}`
+		if(src.length > 0 && !src.startsWith("http")){
+			console.log("RAW KUMA ABNORMAL URL",src)
+			src = `https:${src}`
+		}
 		return {
 			share: `${this.baseUrl}manga/${mangaId}`,
 			name: dom.querySelector('.entry-title')?.textContent.trim() ?? '',
 			cover: {
-				src: `https:${dom.querySelector('.thumb img')?.getAttribute('src') ?? ''}`,
+				src: src,
 				headers: []
 			},
 			tags: dom

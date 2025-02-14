@@ -39,8 +39,8 @@ class ReadmSource extends SourceBase {
 		const searchUrl = page
 			? page
 			: query
-			? `${this.baseUrl}/?s=${query.split(' ').join('+')}&search-btn=`
-			: this.baseUrl;
+				? `${this.baseUrl}/?s=${query.split(' ').join('+')}&search-btn=`
+				: this.baseUrl;
 
 		const dom = html(await fetch(searchUrl).then((a) => a.text()));
 
@@ -56,12 +56,12 @@ class ReadmSource extends SourceBase {
 					id: decodeURIComponent(itemId.slice(1, itemId.length - 1)),
 					name: aTag.getAttribute('title') ?? '',
 					cover:
-						{
-							src: this.baseUrl +
-							aTag
+					{
+						src: this.baseUrl +
+							(aTag
 								.querySelector('img')
-								?.getAttribute('data-src') ?? '',headers: []
-						}
+								?.getAttribute('data-src') ?? ''), headers: []
+					}
 				});
 			}
 		}
@@ -107,11 +107,10 @@ class ReadmSource extends SourceBase {
 			share: targetUrl,
 			name: dom.querySelector('.detail-header-title')?.text.trim() ?? '',
 			cover: {
-				src: `${this.baseUrl}${
-					dom
+				src: `${this.baseUrl}${dom
 						.querySelector('.detail-header-image img')
 						?.getAttribute('src') ?? ''
-				}`,
+					}`,
 				headers: []
 			},
 			tags: [],
@@ -146,10 +145,10 @@ class ReadmSource extends SourceBase {
 					element.querySelector('.side-episode-title')?.textContent ??
 					'',
 				released: extractAndFormatDate(element.querySelector('.side-episode-date')?.textContent ?? '')
-					// element
-					// 	.querySelector('.side-episode-date')
-					// 	?.text.split('/')
-					// 	.join('-') ?? null,
+				// element
+				// 	.querySelector('.side-episode-date')
+				// 	?.text.split('/')
+				// 	.join('-') ?? null,
 			});
 		}
 
@@ -170,11 +169,11 @@ class ReadmSource extends SourceBase {
 		);
 
 		return chapterElements.map((a) => {
-			return makeApiImage(a.getAttribute('data-src')!,{
+			return makeApiImage(a.getAttribute('data-src')!, {
 				'User-Agent':
 					'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
 				Referer: this.baseUrl,
-		})
+			})
 		});
 	}
 }

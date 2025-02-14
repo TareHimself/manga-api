@@ -55,12 +55,12 @@ class SyosetuSeSource extends SourceBase {
 					name: aTag.getAttribute('title') ?? '',
 					cover: {
 						src: this.baseUrl +
-						aTag
-							.querySelector('img')
-							?.getAttribute('data-src') ?? '',
-							headers: []
+							(aTag
+								.querySelector('img')
+								?.getAttribute('data-src') ?? ''),
+						headers: []
 					}
-						,
+					,
 				});
 			}
 		}
@@ -105,11 +105,10 @@ class SyosetuSeSource extends SourceBase {
 		return {
 			share: targetUrl,
 			name: dom.querySelector('.detail-header-title')?.text.trim() ?? '',
-			cover: makeApiImage(`${this.baseUrl}${
-				dom
+			cover: makeApiImage(`${this.baseUrl}${dom
 					.querySelector('.detail-header-image img')
 					?.getAttribute('src') ?? ''
-			}`),
+				}`),
 			tags: [],
 			status: EMangaStatus.UNKNOWN,
 			description:
@@ -142,10 +141,10 @@ class SyosetuSeSource extends SourceBase {
 					element.querySelector('.side-episode-title')?.textContent ??
 					'',
 				released: extractAndFormatDate(element.querySelector('.side-episode-date')?.textContent ?? '')
-					// element
-					// 	.querySelector('.side-episode-date')
-					// 	?.text.split('/')
-					// 	.join('-') ?? null,
+				// element
+				// 	.querySelector('.side-episode-date')
+				// 	?.text.split('/')
+				// 	.join('-') ?? null,
 			});
 		}
 
@@ -166,13 +165,13 @@ class SyosetuSeSource extends SourceBase {
 		);
 
 		return chapterElements.map((a) => {
-			return makeApiImage(a.getAttribute('data-src')!,{
+			return makeApiImage(a.getAttribute('data-src')!, {
 				'User-Agent':
 					'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
 				Referer: this.baseUrl,
 			})
 		});
-		
+
 	}
 }
 

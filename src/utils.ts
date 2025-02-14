@@ -45,8 +45,9 @@ export function pad(data: string) {
 	return data;
 }
 const DATE_TYPE_1_REGEX = /([a-zA-Z]{3,9})[,\-\s]?([0-9]{1,2})[,\-\s]?[,\-\s]?([0-9]{2,4})/;
-const DATE_TYPE_2_REGEX = /^(\d{4})[-/](\d{2})[-/](\d{2})/;
-const DATE_TYPE_3_REGEX = /^([0-9]{1,2}) (second|minute|month|year|week|hour|day)s?(?:\s?ago)$/i
+const DATE_TYPE_2_REGEX = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/;
+const DATE_TYPE_3_REGEX = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/;
+const DATE_TYPE_4_REGEX = /^([0-9]{1,2}) (second|minute|month|year|week|hour|day)s?(?:\s?ago)$/i
 const MONTH_TO_NUMBER: Record<string, string> = {
 	jan: '01',
 	feb: '02',
@@ -72,7 +73,11 @@ const MONTH_TO_NUMBER: Record<string, string> = {
 	november: '11',
 	december: '12',
 };
-export function extractAndFormatDate(originalDate: string) {
+export function extractAndFormatDate(originalDate: string | null) {
+	if(originalDate === null){
+		return null
+	}
+
 	if (CORRECT_DATE_REGEX.test(originalDate)) {
 		
 		return originalDate;
@@ -97,11 +102,21 @@ export function extractAndFormatDate(originalDate: string) {
 
 		const [year, month, day] = match.slice(1);
 
-		return validateOrNullDate(`${year} ${month} ${day}`);
+		return validateOrNullDate(`${year} ${pad(month)} ${pad(day)}`);
 	}
 
-	if(DATE_TYPE_3_REGEX.test(originalDate)){
-		const match = originalDate.match(DATE_TYPE_3_REGEX)
+	if (DATE_TYPE_3_REGEX.test(originalDate)) {
+		
+		const match = originalDate.match(DATE_TYPE_3_REGEX);
+		if (!match) return null;
+
+		const [day, month, year] = match.slice(1);
+
+		return validateOrNullDate(`${year} ${pad(month)} ${pad(day)}`);
+	}
+
+	if(DATE_TYPE_4_REGEX.test(originalDate)){
+		const match = originalDate.match(DATE_TYPE_4_REGEX)
 		if(!match) return null
 
 		const now = new Date()

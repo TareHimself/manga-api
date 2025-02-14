@@ -8,6 +8,7 @@
     "debug": "node ./dist/index.js --debug --no-cluster",
     "docker:run": "docker run -p 8888:8888 --name manga-api tarehimself/manga-api",
     "docker:build": "docker build -f Dockerfile . -t tarehimself/manga-api",
+    "docker:br": "npm run docker:build && npm run docker:run",
     "build": "npm run clean && npx tsc",
     "watch": "npm run build && tsc-watch",
     "pretty": "npx prettier --write **/*.ts",

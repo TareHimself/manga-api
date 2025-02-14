@@ -59,12 +59,12 @@ class MangaFireSource extends SourceBase {
 					name:
 						element.querySelector('.info a')?.textContent.trim() ??
 						'',
-					cover: {
-						src:
-							aTag.querySelector('img')?.getAttribute('src') ??
-							'',
-						headers: [],
-					},
+					cover: makeApiImage(aTag.querySelector('img')?.getAttribute('src') ??
+					'',{
+						'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+									Referer: this.baseUrl,
+									Origin: this.baseUrl,
+					}),
 				});
 			}
 		}
@@ -108,11 +108,11 @@ class MangaFireSource extends SourceBase {
 		return {
 			share: targetUrl,
 			name: dom.querySelector('.info h1')?.textContent.trim() ?? '',
-			cover: {
-				src:
-					dom.querySelector('.poster img')?.getAttribute('src') ?? '',
-				headers: [],
-			},
+			cover: makeApiImage(dom.querySelector('.poster img')?.getAttribute('src') ?? '',{
+				'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+							Referer: this.baseUrl,
+							Origin: this.baseUrl,
+			}),
 			tags:
 				dom
 					.querySelectorAll('.sidebar .meta div')

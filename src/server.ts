@@ -49,6 +49,7 @@ app.get(`/pages/:pageId`,async (req,res)=>{
 })
 
 app.get(`/api/v${apiVersion}`, async (_req, res) => {
+	console.log(_req.headers)
 	const data = Array.from(sourceManager.sources.values()).sort((a,b)=>{
 		if(a.name.toLowerCase() === b.name.toLowerCase()){
 			return 0
