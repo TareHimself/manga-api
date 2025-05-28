@@ -5,6 +5,7 @@ import { assert, buildErrorResponse, buildResponse } from './utils';
 import { IManga } from './types';
 import winston from 'winston';
 import expressWinston from 'express-winston';
+import { isDebug } from './env';
 
 const apiVersion = 1;
 
@@ -208,8 +209,9 @@ app.get(/.*/,(_,res)=>{
 	res.redirect("https://www.urbandictionary.com/define.php?term=L%20bozo")
 })
 
+const port = isDebug() ? 10000 : 8888;
 sourceManager.loadSources().then(() => {
-	app.listen(process.argv.includes("--debug") ? 10000 : 8888, async () => {
-		console.log('Server online');
+	app.listen(port, async () => {
+		console.log(`Server online on port: ${port}`);
 	});
 });

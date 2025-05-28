@@ -15,7 +15,7 @@ class ManganatoSource extends SourceBase {
 	baseUrl: string;
 	constructor() {
 		super();
-		this.baseUrl = 'https://manganato.com/';
+		this.baseUrl = 'https://natomanga.com/';
 	}
 
 	override get id(): string {
@@ -40,70 +40,133 @@ class ManganatoSource extends SourceBase {
 			page ||
 			(query
 				? `${this.baseUrl}search/story/${encodeURIComponent(
-						query.split(' ').join('_')
-				  )}`
-				: this.baseUrl + 'genre-all');
+					query.split(' ').join('_')
+				)}`
+				: this.baseUrl + 'genre/all');
 
-		// console.log("Using",searchUrl,)
+		console.log("Using", searchUrl)
 		const dom = html(await fetch(searchUrl).then((a) => a.text()));
 		const searchResults: IMangaPreview[] = [];
 
-		let elements = dom.querySelectorAll('.search-story-item');
-		if (elements.length === 0) {
-			elements = dom.querySelectorAll('.content-genres-item');
-		}
-
-		// await fs.writeFile("tes.html",await fetch(searchUrl).then((a) => a.text()))
-
-		for (const element of elements) {
-			const itemId =
-				element
-					.querySelector('a')
-					?.getAttribute('href')
-					?.split('/')
-					.reverse()
-					.slice(0, 2)
-					.reverse()
-					.join('|') ?? '';
-
-			searchResults.push({
-				id: encodeURIComponent(itemId),
-				name: element.querySelector('h3')?.textContent.trim() ?? '',
-				cover: {
-					src:
-						element.querySelector('img')?.getAttribute('src') ?? '',
-					headers: [],
-				},
-			});
-		}
-
-		const navElements = dom.querySelectorAll('.group-page a').slice(1, -1);
-		const currentNavElementIndex = navElements.findIndex(
-			(a) =>
-				a.classNames.includes('page-select') ||
-				a.classNames.includes('page-blue')
-		);
-
-		if (currentNavElementIndex !== -1) {
-			const nextPageIndex =
-				currentNavElementIndex + 1 < navElements.length - 1
-					? currentNavElementIndex + 1
-					: -1;
-
-			if (nextPageIndex !== -1) {
-				return {
-					items: searchResults,
-					next:
-						navElements[nextPageIndex]?.getAttribute('href') ??
-						null,
-				};
+		if (query) {
+			let elements = dom.querySelectorAll('.search-story-item');
+			if (elements.length === 0) {
+				elements = dom.querySelectorAll('.content-genres-item');
 			}
-		}
 
-		return {
-			items: searchResults,
-			next: null,
-		};
+			// await fs.writeFile("tes.html",await fetch(searchUrl).then((a) => a.text()))
+
+			for (const element of elements) {
+				const itemId =
+					element
+						.querySelector('a')
+						?.getAttribute('href')
+						?.split('/')
+						.reverse()
+						.slice(0, 2)
+						.reverse()
+						.join('|') ?? '';
+
+				searchResults.push({
+					id: encodeURIComponent(itemId),
+					name: element.querySelector('h3')?.textContent.trim() ?? '',
+					cover: {
+						src:
+							element.querySelector('img')?.getAttribute('src') ?? '',
+						headers: [],
+					},
+				});
+			}
+
+			const navElements = dom.querySelectorAll('.group-page a').slice(1, -1);
+			const currentNavElementIndex = navElements.findIndex(
+				(a) =>
+					a.classNames.includes('page-select') ||
+					a.classNames.includes('page-blue')
+			);
+
+			if (currentNavElementIndex !== -1) {
+				const nextPageIndex =
+					currentNavElementIndex + 1 < navElements.length - 1
+						? currentNavElementIndex + 1
+						: -1;
+
+				if (nextPageIndex !== -1) {
+					return {
+						items: searchResults,
+						next:
+							navElements[nextPageIndex]?.getAttribute('href') ??
+							null,
+					};
+				}
+			}
+
+			return {
+				items: searchResults,
+				next: null,
+			};
+		}
+		else
+		{
+			let elements = dom.querySelectorAll('.truyen-list .list-truyen-item-wrap');
+			// await fs.writeFile("tes.html",await fetch(searchUrl).then((a) => a.text()))
+			console.log(dom,elements)
+			for (const element of elements) {
+				const itemId =
+					element
+						.querySelector('a')
+						?.getAttribute('href')
+						?.split('/')
+						.reverse()[0] ?? '';
+
+				searchResults.push({
+					id: encodeURIComponent(itemId),
+					name: element.querySelector('h3 > a')?.textContent.trim() ?? '',
+					cover: {
+						src:
+							element.querySelector('a > img')?.getAttribute('src') ?? '',
+						headers: [
+							{
+								key: "User-Agent",
+								value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+							},
+							{
+								key: "referer",
+								value: this.baseUrl
+							}
+						],
+					},
+				});
+			}
+
+			const navElements = dom.querySelectorAll('.group-page a').slice(1, -1);
+			const currentNavElementIndex = navElements.findIndex(
+				(a) =>
+					a.classNames.includes('page-select') ||
+					a.classNames.includes('page-blue')
+			);
+
+			if (currentNavElementIndex !== -1) {
+				const nextPageIndex =
+					currentNavElementIndex + 1 < navElements.length - 1
+						? currentNavElementIndex + 1
+						: -1;
+
+				if (nextPageIndex !== -1) {
+					return {
+						items: searchResults,
+						next:
+							navElements[nextPageIndex]?.getAttribute('href') ??
+							null,
+					};
+				}
+			}
+
+			return {
+				items: searchResults,
+				next: null,
+			};
+		}
 	}
 
 	override async handleManga(mangaId: string): Promise<IMangaResponse> {

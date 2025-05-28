@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer-extra';
 import { Page } from 'puppeteer';
+import { isDebug } from './env';
 puppeteer.use(require('puppeteer-extra-plugin-adblocker')());
 puppeteer.use(require('puppeteer-extra-plugin-stealth')());
 
@@ -28,7 +29,7 @@ function onPageClosed() {
 		}, 1000 * 60 * 60);
 	}
 }
-export async function getBrowser(headless: boolean = !process.argv.includes("--debug")) {
+export async function getBrowser(headless: boolean = !isDebug()) {
 	if (!activeBrowser) {
 		if (isLoadingBrowser) {
 			await new Promise<void>((res) => {
